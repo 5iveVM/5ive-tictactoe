@@ -1,0 +1,1123 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>5ive TicTacToe</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap');
+
+    :root {
+      --bg-gradient: radial-gradient(circle at 50% -20%, #1e1b4b 0%, #020617 80%);
+      --card-bg: rgba(15, 23, 42, 0.6);
+      --card-border: rgba(99, 102, 241, 0.2);
+      --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+
+      --text: #f8fafc;
+      --muted: #94a3b8;
+
+      --accent-1: #38bdf8;
+      /* Cyan */
+      --accent-2: #818cf8;
+      /* Indigo */
+      --accent-glow: 0 0 20px rgba(56, 189, 248, 0.4);
+
+      --x-color: #06b6d4;
+      --x-glow: 0 0 15px rgba(6, 182, 212, 0.6);
+
+      --o-color: #ec4899;
+      --o-glow: 0 0 15px rgba(236, 72, 153, 0.6);
+
+      --danger: #ef4444;
+      --line: rgba(255, 255, 255, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Outfit', sans-serif;
+      color: var(--text);
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      min-height: 100vh;
+      padding: 30px 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 900px;
+      display: grid;
+      gap: 24px;
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      box-shadow: var(--card-shadow);
+      border-radius: 16px;
+      padding: 24px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(99, 102, 241, 0.3);
+      box-shadow: 0 8px 32px 0 rgba(99, 102, 241, 0.15);
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 6vw, 42px);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: pulseGlow 4s infinite alternate;
+    }
+
+    .wallet {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button,
+    select {
+      font-family: 'Outfit', sans-serif;
+      background: rgba(30, 41, 59, 0.8);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      backdrop-filter: blur(4px);
+    }
+
+    button:hover:not(:disabled) {
+      background: rgba(51, 65, 85, 0.9);
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+      border: none;
+      color: white;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    button.primary:hover {
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+      background: linear-gradient(135deg, #60a5fa 0%, #818cf8 100%);
+    }
+
+    button.warn {
+      background: linear-gradient(135deg, #ef4444 0%, #f43f5e 100%);
+      border: none;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+    }
+
+    button.warn:hover {
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    }
+
+    .status {
+      display: grid;
+      gap: 16px;
+    }
+
+    select {
+      padding: 10px 16px;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px top 50%;
+      background-size: 10px auto;
+      padding-right: 32px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      letter-spacing: 0.3px;
+    }
+
+    #gameStatus {
+      font-size: 16px;
+      font-weight: 300;
+      color: #cbd5e1;
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      border-left: 4px solid var(--accent-1);
+    }
+
+    .game {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 32px;
+      align-items: start;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(80px, 120px));
+      gap: 12px;
+      justify-content: center;
+      margin: 0 auto;
+      perspective: 1000px;
+    }
+
+    .cell {
+      aspect-ratio: 1;
+      font-size: clamp(36px, 6vw, 56px);
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5), 0 4px 10px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+      overflow: hidden;
+      color: transparent;
+      /* Text only shows up effectively via attr, but fallback applied below */
+    }
+
+    .cell::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .cell:hover::before {
+      opacity: 1;
+    }
+
+    .cell:hover:not([data-val]) {
+      transform: scale(1.05) translateZ(10px);
+      border-color: rgba(99, 102, 241, 0.5);
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5), 0 8px 20px var(--card-border);
+    }
+
+    .cell[data-val="X"] {
+      color: var(--x-color);
+      text-shadow: var(--x-glow);
+      animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    .cell[data-val="O"] {
+      color: var(--o-color);
+      text-shadow: var(--o-glow);
+      animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    .side {
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .error {
+      color: #fee2e2;
+      font-weight: 500;
+      min-height: 20px;
+      font-size: 14px;
+      background: rgba(239, 68, 68, 0.1);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .error:empty {
+      display: none;
+    }
+
+    details {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    summary {
+      padding: 12px 16px;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      user-select: none;
+      outline: none;
+      background: rgba(255, 255, 255, 0.02);
+      cursor: pointer;
+    }
+
+    summary:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #f8fafc;
+    }
+
+    pre {
+      margin: 0;
+      max-height: 320px;
+      overflow: auto;
+      font-size: 12px;
+      font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+      color: #a7f3d0;
+      background: #020617;
+      padding: 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    pre::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    pre::-webkit-scrollbar-track {
+      background: #020617;
+    }
+
+    pre::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+
+    pre::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes popIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.5) rotate(-10deg);
+      }
+
+      70% {
+        transform: scale(1.1) rotate(5deg);
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1) rotate(0);
+      }
+    }
+
+    @keyframes pulseGlow {
+      from {
+        text-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+      }
+
+      to {
+        text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+      }
+    }
+
+    @media (max-width: 720px) {
+      .header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: center;
+      }
+
+      .board {
+        grid-template-columns: repeat(3, minmax(70px, 1fr));
+      }
+
+      body {
+        padding: 16px 12px;
+      }
+
+      .wallet-controls {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0 30px;
+      width: 100%;
+    }
+
+    .wallet-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      width: 100%;
+    }
+
+    #gameStatus {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--accent-1);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+      min-height: 28px;
+      background: transparent;
+      border: none;
+      padding: 0;
+      text-align: center;
+    }
+
+    .game-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      background: var(--card-bg);
+      padding: 24px;
+      border-radius: 20px;
+      border: 1px solid var(--card-border);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(10px);
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .info-row {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .debug-drawer {
+      margin-top: 40px;
+      width: 100%;
+      text-align: center;
+      opacity: 0.5;
+      transition: opacity 0.3s, text-align 0.3s;
+    }
+
+    .debug-drawer:hover,
+    .debug-drawer[open] {
+      opacity: 1;
+      text-align: left;
+    }
+
+    button.ghost {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    button.ghost:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>Tic-Tac-Toe</h1>
+      <div class="wallet-controls">
+        <span id="walletStatus" class="pill">not connected</span>
+        <span id="readyStatus" class="pill" style="display:none"></span>
+        <button id="walletConnect" class="primary">Connect Wallet</button>
+        <button id="walletMock" class="ghost">Mock Wallet</button>
+        <button id="walletDisconnect" class="ghost" style="display:none">Disconnect</button>
+      </div>
+    </div>
+
+    <div class="game-container">
+      <div id="gameStatus">Press "New Game" to start.</div>
+      <div id="error" class="error"></div>
+
+      <div class="board" id="board"></div>
+
+      <div class="game-controls">
+        <div class="info-row">
+          <div class="pill" id="turnLabel">Turn: -</div>
+          <div class="pill" id="resultLabel">Result: -</div>
+        </div>
+        <div class="action-row">
+          <select id="mode">
+            <option value="single">Vs CPU</option>
+            <option value="local">Local 2P</option>
+          </select>
+          <button id="newGame" class="primary">New Game</button>
+          <button id="resign" class="warn">Resign</button>
+          <button id="refresh" class="ghost">↻</button>
+        </div>
+      </div>
+    </div>
+
+    <details class="debug-drawer">
+      <summary class="muted">[+] On-Chain Logs & Dev Data</summary>
+      <pre id="out"></pre>
+    </details>
+  </div>
+
+  <script src="https://unpkg.com/@solana/web3.js@1.98.2/lib/index.iife.min.js"></script>
+  <script>
+    const boardEl = document.getElementById('board');
+    const modeEl = document.getElementById('mode');
+    const outEl = document.getElementById('out');
+    const walletStatusEl = document.getElementById('walletStatus');
+    const readyStatusEl = document.getElementById('readyStatus');
+    const gameStatusEl = document.getElementById('gameStatus');
+    const turnLabelEl = document.getElementById('turnLabel');
+    const resultLabelEl = document.getElementById('resultLabel');
+    const errorEl = document.getElementById('error');
+
+    let state = null;
+    let walletProvider = null;
+    let walletAddress = '';
+    let solanaConnection = null;
+    let lastTxError = null;
+    let walletMode = 'none';
+
+    const shortKey = (k) => (k && k.length > 12 ? `${k.slice(0, 4)}...${k.slice(-4)}` : k || '-');
+
+    const post = async (url, body = {}) => {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...body, wallet: walletAddress || null }),
+      });
+      return res.json();
+    };
+
+    const setError = (msg = '') => {
+      errorEl.textContent = msg;
+    };
+
+    const setReady = (msg = '', ok = false) => {
+      if (ok && (msg.startsWith('ready') || !msg)) {
+        readyStatusEl.style.display = 'none';
+      } else {
+        readyStatusEl.style.display = 'inline-flex';
+        readyStatusEl.textContent = `Node: ${msg}`;
+        readyStatusEl.style.color = ok ? 'var(--accent-1)' : '#fca5a5';
+        readyStatusEl.style.borderColor = ok ? 'var(--card-border)' : '#7f1d1d';
+      }
+    };
+
+    const formatErr = (err) => {
+      if (!err) return 'Unknown error';
+      if (err instanceof Error) return `${err.name}: ${err.message}`;
+      try {
+        return JSON.stringify(err);
+      } catch {
+        return String(err);
+      }
+    };
+
+    const updateWalletUi = () => {
+      const connectBtn = document.getElementById('walletConnect');
+      const mockBtn = document.getElementById('walletMock');
+      const disconnectBtn = document.getElementById('walletDisconnect');
+      const isConnected = !!walletAddress;
+
+      connectBtn.style.display = isConnected ? 'none' : 'inline-block';
+      mockBtn.style.display = isConnected ? 'none' : 'inline-block';
+      disconnectBtn.style.display = isConnected ? 'inline-block' : 'none';
+
+      if (walletAddress) {
+        const label = walletMode === 'mock' ? 'mock' : 'signed';
+        walletStatusEl.textContent = `${shortKey(walletAddress)} (${label})`;
+        walletStatusEl.style.color = 'var(--text)';
+        walletStatusEl.style.borderColor = 'var(--accent-1)';
+      } else if (walletProvider) {
+        walletStatusEl.textContent = 'Disconnected';
+        walletStatusEl.style.color = 'var(--muted)';
+        walletStatusEl.style.borderColor = 'var(--line)';
+      } else {
+        walletStatusEl.textContent = 'Phantom not found';
+        walletStatusEl.style.color = 'var(--danger)';
+        walletStatusEl.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+      }
+    };
+
+    const walletReady = () => Boolean(walletAddress && walletProvider && window.solanaWeb3?.Transaction);
+
+    const walletSupportsSend = () => Boolean(walletProvider?.signTransaction || walletProvider?.sendTransaction || walletProvider?.signAndSendTransaction);
+
+    const requireWallet = () => {
+      if (!walletReady()) {
+        throw new Error('Connect Phantom to sign actions.');
+      }
+      if (!walletSupportsSend()) {
+        throw new Error('Wallet adapter does not support transaction signing/sending.');
+      }
+    };
+    const ACTION_FN = {
+      init: 'init_config',
+      'create-open': 'create_open_match',
+      'create-invite': 'create_invite_match',
+      join: 'join_match',
+      'start-single': 'start_single_player',
+      move: 'play_ttt',
+      'single-move': 'play_ttt_single',
+      'cpu-move': 'play_cpu_random',
+      'claim-timeout': 'claim_timeout',
+      resign: 'resign',
+      cancel: 'cancel_waiting_match',
+    };
+
+    const ensureConnection = () => {
+      if (!solanaConnection) {
+        solanaConnection = new window.solanaWeb3.Connection('http://127.0.0.1:8899', 'confirmed');
+      }
+      return solanaConnection;
+    };
+
+    const parseLogs = (err) => {
+      if (!err) return [];
+      if (Array.isArray(err.logs)) return err.logs;
+      if (Array.isArray(err?.data?.logs)) return err.data.logs;
+      const text = formatErr(err);
+      const m = text.match(/Logs:\s*\[([\s\S]*?)\]/);
+      if (!m) return [];
+      return m[1]
+        .split(',')
+        .map((s) => s.trim().replace(/^"|"$/g, ''))
+        .filter(Boolean);
+    };
+
+    const classifyTxError = (err) => {
+      const text = formatErr(err);
+      const logs = parseLogs(err);
+      const instruction = text.match(/Instruction (\d+)/)?.[1] || null;
+      let category = 'rpc';
+      let message = text;
+      if (text.includes('User rejected') || text.includes('rejected the request') || String(err?.code) === '4001') {
+        category = 'user_rejected';
+        message = 'Signature request was rejected in Phantom.';
+      } else if (text.includes('Simulation failed')) {
+        category = 'simulation_failed';
+        message = instruction
+          ? `Simulation failed at instruction ${instruction}.`
+          : 'Transaction simulation failed.';
+      } else if (text.includes('Unexpected error')) {
+        category = 'phantom_internal';
+        message = 'Phantom returned an internal error.';
+      } else if (text.includes('block height exceeded') || text.includes('Blockhash not found')) {
+        category = 'confirm_timeout';
+        message = 'Transaction confirmation failed due to blockhash/timeout.';
+      }
+      return { category, message, instruction, logs, raw: text };
+    };
+
+    const toUserErrorText = (errLike) => {
+      const e = errLike?.category ? errLike : classifyTxError(errLike);
+      const parts = [];
+      parts.push(e.message || 'Transaction failed.');
+      if (e.category) parts.push(`category=${e.category}`);
+      if (e.instruction) parts.push(`instruction=${e.instruction}`);
+      if (e.failedAction) parts.push(`failedAction=${e.failedAction}`);
+      if (e.raw && e.raw !== e.message) parts.push(`raw=${e.raw}`);
+      if (Array.isArray(e.logs) && e.logs.length > 0) {
+        parts.push(`logs=${e.logs.slice(0, 4).join(' | ')}`);
+      }
+      if (e.preflight) {
+        if (e.preflight.failedAction) parts.push(`preflightFailedAction=${e.preflight.failedAction}`);
+        if (e.preflight.instruction) parts.push(`preflightInstruction=${e.preflight.instruction}`);
+        if (Array.isArray(e.preflight.logs) && e.preflight.logs.length > 0) {
+          parts.push(`preflightLogs=${e.preflight.logs.slice(0, 4).join(' | ')}`);
+        }
+      }
+      return parts.join(' | ');
+    };
+
+    const simulateForDiagnostics = async (tx, actions) => {
+      try {
+        const connection = ensureConnection();
+        const sim = await connection.simulateTransaction(tx, {
+          sigVerify: false,
+          replaceRecentBlockhash: true,
+          commitment: 'confirmed',
+        });
+        if (!sim?.value?.err) return null;
+        const logs = Array.isArray(sim.value.logs) ? sim.value.logs : [];
+        const errStr = JSON.stringify(sim.value.err);
+        const ixNum =
+          Number((errStr.match(/InstructionError\":\[(\d+)/)?.[1] ?? NaN)) ||
+          Number((logs.join('\n').match(/Instruction (\d+)/)?.[1] ?? NaN)) ||
+          0;
+        const actionIdx = Math.max(0, ixNum - 1);
+        return {
+          category: 'simulation_failed',
+          message: 'Pre-send simulation failed.',
+          instruction: String(ixNum || 0),
+          failedAction: actions?.[actionIdx]?.action || null,
+          logs,
+          raw: errStr,
+        };
+      } catch (err) {
+        return {
+          category: 'rpc',
+          message: 'Pre-send simulation failed to execute.',
+          instruction: null,
+          failedAction: null,
+          logs: [],
+          raw: formatErr(err),
+        };
+      }
+    };
+
+    const txFromBase64 = (txBase64) =>
+      window.solanaWeb3.Transaction.from(Uint8Array.from(atob(txBase64), (c) => c.charCodeAt(0)));
+
+    const validateBuilt = (action, built) => {
+      if (built?.error) throw new Error(built.error);
+      if (!built?.txBase64) throw new Error(`Missing tx data for ${action}.`);
+      const expected = ACTION_FN[action];
+      if (!expected) throw new Error(`Unsupported action ${action}.`);
+      if (built?.functionName && built.functionName !== expected) {
+        throw new Error(`Builder mismatch for ${action}: expected ${expected}, got ${built.functionName}`);
+      }
+      const tx = txFromBase64(built.txBase64);
+      if (!tx.instructions || tx.instructions.length === 0) {
+        throw new Error(`No instructions in transaction for ${action}.`);
+      }
+      const missingKeys = tx.instructions.some((ix) => !ix.keys || ix.keys.length === 0);
+      if (missingKeys) throw new Error(`Instruction missing account keys for ${action}.`);
+      return tx;
+    };
+
+    const sendAndConfirm = async (tx) => {
+      requireWallet();
+      const connection = ensureConnection();
+      tx.feePayer = new window.solanaWeb3.PublicKey(walletAddress);
+      tx.recentBlockhash = (await connection.getLatestBlockhash('confirmed')).blockhash;
+
+      if (walletMode === 'mock') {
+        const raw = tx.serialize({ requireAllSignatures: false, verifySignatures: false }).toString('base64');
+        const sent = await post('/api/mock-send', { txBase64: raw });
+        if (sent?.error || !sent?.signature) {
+          throw classifyTxError(new Error(sent?.error || 'Mock wallet send failed.'));
+        }
+        return { signature: sent.signature, confirmedSlot: Number(sent.confirmedSlot || 0) };
+      }
+
+      let signature = '';
+      try {
+        if (walletProvider.signTransaction) {
+          try {
+            const signedTx = await walletProvider.signTransaction(tx);
+            signature = await connection.sendRawTransaction(signedTx.serialize(), {
+              skipPreflight: true,
+            });
+          } catch (err) {
+            const errorStr = err?.message || String(err);
+            if (errorStr.includes('signTransaction is not a function') && walletProvider.sendTransaction) {
+              signature = await walletProvider.sendTransaction(tx, connection);
+            } else {
+              throw err;
+            }
+          }
+        } else if (walletProvider.sendTransaction) {
+          signature = await walletProvider.sendTransaction(tx, connection);
+        } else if (walletProvider.signAndSendTransaction) {
+          const sent = await walletProvider.signAndSendTransaction(tx);
+          signature = sent?.signature || '';
+        } else {
+          throw new Error('Wallet adapter does not support signTransaction or sendTransaction');
+        }
+
+        if (!signature) throw new Error('Wallet returned empty signature.');
+        await connection.confirmTransaction(signature, 'confirmed');
+        const sigStatus = await connection.getSignatureStatuses([signature]);
+        const status = sigStatus?.value?.[0] || null;
+        if (status?.err) {
+          const txInfo = await connection.getTransaction(signature, {
+            commitment: 'confirmed',
+            maxSupportedTransactionVersion: 0,
+          });
+          const fail = {
+            category: 'simulation_failed',
+            message: 'Transaction landed but failed on-chain.',
+            instruction: null,
+            logs: txInfo?.meta?.logMessages || [],
+            raw: JSON.stringify(status.err),
+          };
+          throw fail;
+        }
+        const confirmedSlot = await connection.getSlot('confirmed');
+        return { signature, confirmedSlot };
+      } catch (primaryErr) {
+        throw classifyTxError(primaryErr);
+      }
+    };
+
+    const commitActions = async (actions, signature, confirmedSlot) => {
+      let last = null;
+      for (const item of actions) {
+        const action = String(item?.action || '');
+        const payload = item?.payload || {};
+        const committed = await post('/api/commit-wallet-action', { action, signature, confirmedSlot, ...payload });
+        if (committed?.error) throw new Error(committed.error);
+        last = committed;
+      }
+      return last;
+    };
+
+    const executeActions = async (actions) => {
+      requireWallet();
+      if (!Array.isArray(actions) || actions.length === 0) throw new Error('No actions provided.');
+
+      const builtParts = [];
+      for (const item of actions) {
+        const action = String(item?.action || '');
+        const payload = item?.payload || {};
+        const built = await post('/api/build-wallet-action', { action, ...payload });
+        builtParts.push({ action, payload, tx: validateBuilt(action, built) });
+      }
+
+      const tx = new window.solanaWeb3.Transaction();
+      for (const part of builtParts) {
+        for (const ix of part.tx.instructions) tx.add(ix);
+      }
+
+      try {
+        const sent = await sendAndConfirm(tx);
+        return commitActions(actions, sent.signature, sent.confirmedSlot);
+      } catch (err) {
+        const txErr = err?.category ? err : classifyTxError(err);
+        const ixNum = Number(txErr.instruction || 0);
+        // Runtime usually inserts compute budget ix first; map ix->action index for clarity.
+        const actionIdx = Math.max(0, ixNum - 1);
+        if (actions[actionIdx]?.action) {
+          txErr.failedAction = String(actions[actionIdx].action);
+        }
+        const simDiag = await simulateForDiagnostics(tx, actions);
+        if (simDiag) {
+          txErr.preflight = simDiag;
+          if (!txErr.failedAction && simDiag.failedAction) txErr.failedAction = simDiag.failedAction;
+          if ((!txErr.logs || txErr.logs.length === 0) && simDiag.logs?.length) txErr.logs = simDiag.logs;
+        }
+        throw txErr;
+      }
+    };
+
+    const sendWalletAction = async (action, payload = {}) => executeActions([{ action, payload }]);
+
+    const sendWalletActionsBatch = async (actions) => executeActions(actions);
+
+    const statusText = (s) => {
+      if (!s) return 'Press "New Game" to start.';
+      const st = s.match?.status;
+      if (st === 0) return 'Game created. Ready to play.';
+      if (st === 1) return 'Game in progress.';
+      if (st === 2) return 'X wins.';
+      if (st === 3) return 'O wins.';
+      if (st === 4) return 'Draw.';
+      if (st === 5) return 'Game cancelled.';
+      return 'Press "New Game" to start.';
+    };
+
+    const turnText = (s) => {
+      const turn = s?.match?.currentTurn;
+      if (turn === 1) return 'Turn: X';
+      if (turn === 2) return 'Turn: O';
+      return 'Turn: -';
+    };
+
+    const resultText = (s) => {
+      const st = s?.match?.status;
+      if (st === 2) return 'Result: X won';
+      if (st === 3) return 'Result: O won';
+      if (st === 4) return 'Result: Draw';
+      if (st === 5) return 'Result: Cancelled';
+      return 'Result: -';
+    };
+
+    const renderBoard = () => {
+      boardEl.innerHTML = '';
+      const board = state?.state?.board || new Array(9).fill(0);
+      for (let i = 0; i < 9; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'cell';
+        const val = board[i] === 1 ? 'X' : board[i] === 2 ? 'O' : '';
+        btn.textContent = val;
+        if (val) btn.setAttribute('data-val', val);
+        btn.onclick = async () => {
+          try {
+            setError('');
+            lastTxError = null;
+            const row = Math.floor(i / 3);
+            const col = i % 3;
+            validateMovePreflight(row, col);
+            if (modeEl.value === 'single') {
+              state = await sendWalletAction('single-move', { row, col });
+            } else {
+              state = await sendWalletAction('move', { role: activeRole(), row, col });
+            }
+            if (state?.error) throw new Error(state.error);
+          } catch (err) {
+            const txErr = err?.category ? err : classifyTxError(err);
+            lastTxError = txErr;
+            setError(toUserErrorText(txErr));
+          }
+          render();
+        };
+        boardEl.appendChild(btn);
+      }
+    };
+
+    const render = () => {
+      renderBoard();
+      const s = state?.state || null;
+      gameStatusEl.textContent = statusText(s);
+      turnLabelEl.textContent = turnText(s);
+      resultLabelEl.textContent = resultText(s);
+      outEl.textContent = JSON.stringify({ state, txError: lastTxError }, null, 2);
+    };
+
+    const refreshState = async () => {
+      state = await post('/api/state');
+      if (state?.error) throw new Error(state.error);
+    };
+
+    const activeRole = () => (state?.state?.match?.currentTurn === 2 ? 'p2' : 'p1');
+
+    const validateMovePreflight = (row, col) => {
+      const s = state?.state;
+      if (!s || !s.match) throw new Error('Game state is not loaded.');
+      if (s.match.status !== 1) throw new Error('Game is not active.');
+      if (row < 0 || row > 2 || col < 0 || col > 2) throw new Error('Move is out of bounds.');
+      const cell = row * 3 + col;
+      if ((s.board || [])[cell] !== 0) throw new Error('That square is already occupied.');
+      if (modeEl.value !== 'single' && activeRole() === 'p2' && !s.match.player2) {
+        throw new Error('Second player has not joined.');
+      }
+    };
+
+    const refreshReadiness = async () => {
+      try {
+        const ready = await post('/api/ready');
+        if (ready?.ok) {
+          const sol = Number(ready.wallet?.balanceSol || 0).toFixed(2);
+          const funded = ready.wallet?.hasMinFunds ? `wallet ${sol} SOL` : `wallet low (${sol} SOL)`;
+          setReady(`ready (${funded})`, Boolean(ready.wallet?.hasMinFunds || !walletAddress));
+        } else {
+          setReady(ready?.error || 'not ready', false);
+        }
+      } catch (err) {
+        setReady(err instanceof Error ? err.message : String(err), false);
+      }
+    };
+
+    const newGame = async () => {
+      setError('');
+      lastTxError = null;
+      if (modeEl.value === 'single') {
+        const result = await sendWalletActionsBatch([
+          { action: 'create-open' },
+          { action: 'start-single' },
+        ]);
+        if (result?.error) throw new Error(result.error);
+      } else {
+        const result = await sendWalletActionsBatch([
+          { action: 'create-open' },
+          { action: 'join', payload: { role: 'p2' } },
+        ]);
+        if (result?.error) throw new Error(result.error);
+      }
+
+      await refreshState();
+    };
+
+    document.getElementById('newGame').onclick = async () => {
+      try {
+        lastTxError = null;
+        await newGame();
+      } catch (err) {
+        const txErr = err?.category ? err : classifyTxError(err);
+        lastTxError = txErr;
+        setError(toUserErrorText(txErr));
+      }
+      render();
+    };
+
+    document.getElementById('refresh').onclick = async () => {
+      try {
+        setError('');
+        await refreshState();
+        await refreshReadiness();
+      } catch (err) {
+        const txErr = classifyTxError(err);
+        lastTxError = txErr;
+        setError(toUserErrorText(txErr));
+      }
+      render();
+    };
+
+    document.getElementById('resign').onclick = async () => {
+      try {
+        setError('');
+        lastTxError = null;
+        state = await sendWalletAction('resign', { role: activeRole() });
+        if (state?.error) throw new Error(state.error);
+      } catch (err) {
+        const txErr = err?.category ? err : classifyTxError(err);
+        lastTxError = txErr;
+        setError(toUserErrorText(txErr));
+      }
+      render();
+    };
+
+    document.getElementById('walletConnect').onclick = async () => {
+      try {
+        setError('');
+        if (!walletProvider) throw new Error('Phantom extension not found.');
+        const res = await walletProvider.connect();
+        walletAddress = res?.publicKey?.toString() || '';
+        walletMode = 'phantom';
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+      updateWalletUi();
+      await refreshReadiness();
+      render();
+    };
+
+    document.getElementById('walletMock').onclick = async () => {
+      try {
+        setError('');
+        const mock = await post('/api/mock-wallet');
+        if (mock?.error || !mock?.address) throw new Error(mock?.error || 'Mock wallet unavailable');
+        walletProvider = {
+          isMock: true,
+          signAndSendTransaction: async () => {
+            throw new Error('mock provider does not support direct signAndSendTransaction');
+          },
+        };
+        walletAddress = String(mock.address);
+        walletMode = 'mock';
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+      updateWalletUi();
+      await refreshReadiness();
+      render();
+    };
+
+    document.getElementById('walletDisconnect').onclick = async () => {
+      try {
+        if (walletProvider && walletAddress) await walletProvider.disconnect();
+      } catch { }
+      walletAddress = '';
+      walletMode = 'none';
+      updateWalletUi();
+      await refreshReadiness();
+      render();
+    };
+
+    const initWallet = async () => {
+      const p = window.phantom?.solana || window.solana;
+      if (p && p.isPhantom) {
+        walletProvider = p;
+        walletMode = 'phantom';
+        walletProvider.on('connect', () => {
+          walletAddress = walletProvider.publicKey?.toString() || '';
+          walletMode = 'phantom';
+          updateWalletUi();
+        });
+        walletProvider.on('disconnect', () => {
+          walletAddress = '';
+          walletMode = 'none';
+          updateWalletUi();
+        });
+        walletProvider.on('accountChanged', (pubkey) => {
+          walletAddress = pubkey ? pubkey.toString() : '';
+          updateWalletUi();
+        });
+        try {
+          const trusted = await walletProvider.connect({ onlyIfTrusted: true });
+          walletAddress = trusted?.publicKey?.toString() || '';
+        } catch { }
+      }
+      updateWalletUi();
+      await refreshReadiness();
+    };
+
+    (async () => {
+      await initWallet();
+      try {
+        await refreshState();
+        await refreshReadiness();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+      render();
+    })();
+  </script>
+</body>
+
+</html>

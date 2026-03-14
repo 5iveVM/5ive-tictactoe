@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "dist"
+  },
+  "include": [
+    "main.ts",
+    "journey.localnet.ts",
+    "gui-server.ts",
+    "src/**/*.ts",
+    "tests/**/*.ts"
+  ]
+}

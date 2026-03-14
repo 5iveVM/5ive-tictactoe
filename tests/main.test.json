@@ -1,0 +1,38 @@
+{
+  "accounts": {
+    "config_account": {
+      "owner": "system",
+      "lamports": 1000000,
+      "data_len": 256,
+      "is_writable": true
+    },
+    "match_account": {
+      "owner": "system",
+      "lamports": 1000000,
+      "data_len": 2048,
+      "is_writable": true
+    },
+    "profile_p1": {
+      "owner": "system",
+      "lamports": 1000000,
+      "data_len": 256,
+      "is_writable": true
+    },
+    "profile_p2": {
+      "owner": "system",
+      "lamports": 1000000,
+      "data_len": 256,
+      "is_writable": true
+    }
+  },
+  "tests": {
+    "test_ttt_row_win": {
+      "parameters": [7, 0],
+      "expected": { "success": true }
+    },
+    "test_ttt_draw": {
+      "parameters": [397, 114],
+      "expected": { "success": true }
+    }
+  }
+}

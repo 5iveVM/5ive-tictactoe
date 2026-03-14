@@ -1,0 +1,13 @@
+{
+  "artifact_path": "/Users/ivmidable/Development/five-mono/5ive-tictactoe/build/5ive-tictactoe.five",
+  "compiler_version": "unknown",
+  "source_files": [
+    "/Users/ivmidable/Development/five-mono/5ive-tictactoe/src/main.v"
+  ],
+  "target": "vm",
+  "timestamp": "2026-03-14T04:21:48.620Z",
+  "hash": "aa67c6b8cfc1bd9c6c62c0820c6a507aee9334c1a3dfacd106cf69eaa21f815b",
+  "format": "five",
+  "entry_point": "src/main.v",
+  "source_dir": "src"
+}

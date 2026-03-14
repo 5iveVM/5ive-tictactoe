@@ -1,0 +1,27 @@
+# 5IVE VM Project Configuration
+schema_version = 1
+
+[project]
+name = "5ive-tictactoe"
+version = "0.1.0"
+description = "TicTacToe PvP on 5IVE VM"
+source_dir = "src"
+build_dir = "build"
+entry_point = "src/main.v"
+target = "vm"
+
+[optimizations]
+enable_compression = true
+enable_constraint_optimization = true
+optimization_level = "production"
+
+[dependencies]
+std = { package = "@5ive/std", version = "0.1.0", source = "bundled", link = "inline" }
+
+[build]
+max_bytecode_size = 1048576
+target_compute_units = 200000
+
+[deploy]
+cluster = "devnet"
+# program_id = "your-program-id"
