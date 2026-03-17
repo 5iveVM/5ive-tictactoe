@@ -5,7 +5,7 @@ const input = (process.argv[2] || '').toLowerCase();
 const network = input === 'local' ? 'localnet' : input;
 const defaultRpcUrl = process.env.FIVE_RPC_URL || 'http://127.0.0.1:8899';
 const defaultVmProgramId =
-  process.env.FIVE_VM_PROGRAM_ID || '5ive58PJUPaTyAe7tvU1bvBi25o7oieLLTRsJDoQNJst';
+  process.env.FIVE_VM_PROGRAM_ID || '5ive5uKDkc3Yhyfu1Sk7i3eVPDQUmG2GmTm2FnUZiTJd';
 
 if (!['localnet', 'devnet', 'mainnet'].includes(network)) {
   console.error('Usage: node scripts/run-onchain.mjs <localnet|devnet|mainnet>');
