@@ -120,6 +120,22 @@ async function createOwnedAccount(connection, payer, account, owner, space) {
         };
     }
 }
+async function fundWallet(connection, payer, wallet, lamports, useAirdrop) {
+    if (useAirdrop) {
+        const sig = await connection.requestAirdrop(wallet, lamports);
+        const latest = await connection.getLatestBlockhash('confirmed');
+        await connection.confirmTransaction({ signature: sig, ...latest }, 'confirmed');
+        return;
+    }
+    const tx = new Transaction().add(SystemProgram.transfer({
+        fromPubkey: payer.publicKey,
+        toPubkey: wallet,
+        lamports,
+    }));
+    const signature = await connection.sendTransaction(tx, [payer], CONFIRM);
+    const latest = await connection.getLatestBlockhash('confirmed');
+    await connection.confirmTransaction({ signature, ...latest }, 'confirmed');
+}
 async function deployScript(connection, payer, loaded, fiveVmProgramId) {
     let result = await FiveSDK.deployToSolana(loaded.bytecode, connection, payer, {
         fiveVMProgramId: fiveVmProgramId,
@@ -248,8 +264,14 @@ export class LocalnetTicTacToeEngine {
         const artifactPath = await resolveArtifactPath(projectRoot);
         const artifactText = await readFile(artifactPath, 'utf8');
         const loaded = await FiveSDK.loadFiveFile(artifactText);
-        const rpcUrl = process.env.FIVE_RPC_URL || 'http://127.0.0.1:8899';
-        const fiveVmProgramId = process.env.FIVE_VM_PROGRAM_ID || '5ive58PJUPaTyAe7tvU1bvBi25o7oieLLTRsJDoQNJst';
+        const network = process.env.FIVE_NETWORK || 'localnet';
+        const rpcUrl = process.env.FIVE_RPC_URL ||
+            (network === 'localnet'
+                ? 'http://127.0.0.1:8899'
+                : network === 'devnet'
+                    ? 'https://api.devnet.solana.com'
+                    : 'https://api.mainnet-beta.solana.com');
+        const fiveVmProgramId = process.env.FIVE_VM_PROGRAM_ID || '5ive5uKDkc3Yhyfu1Sk7i3eVPDQUmG2GmTm2FnUZiTJd';
         const connection = new Connection(rpcUrl, 'confirmed');
         const payer = await loadPayer();
         const player2 = Keypair.generate();
@@ -278,10 +300,9 @@ export class LocalnetTicTacToeEngine {
         setupSteps.push(await createOwnedAccount(connection, payer, matchAccount, ownerProgram, 2048));
         setupSteps.push(await createOwnedAccount(connection, payer, profileP1Account, ownerProgram, 256));
         setupSteps.push(await createOwnedAccount(connection, payer, profileP2Account, ownerProgram, 256));
+        const useAirdrop = network === 'localnet';
         for (const wallet of [player2, player3]) {
-            const sig = await connection.requestAirdrop(wallet.publicKey, 500_000_000);
-            const latest = await connection.getLatestBlockhash('confirmed');
-            await connection.confirmTransaction({ signature: sig, ...latest }, 'confirmed');
+            await fundWallet(connection, payer, wallet.publicKey, 50_000_000, useAirdrop);
         }
         const failed = setupSteps.find((s) => !s.ok);
         if (failed) {
@@ -362,7 +383,11 @@ export class LocalnetTicTacToeEngine {
             functionName === 'claim_timeout' ||
             functionName === 'resign' ||
             functionName === 'cancel_waiting_match') {
-            return { match_state: this.matchAccount.publicKey.toBase58(), caller: roleKey };
+            return {
+                match_state: this.matchAccount.publicKey.toBase58(),
+                caller: roleKey,
+                __session: this.fiveVmProgramId,
+            };
         }
         if (functionName === 'get_match_status' || functionName === 'get_match_turn' || functionName === 'get_match_winner') {
             return { match_state: this.matchAccount.publicKey.toBase58() };
@@ -402,24 +427,24 @@ export class LocalnetTicTacToeEngine {
         }
         const ix = await builder.instruction();
         const signers = actor.publicKey.equals(this.payer.publicKey) ? [] : [actor];
-        const step = await sendIx(this.connection, this.payer, ix, signers, `${functionName}:${role}`);
-        if (!step.ok && step.err?.includes('invalid instruction data')) {
-            return {
-                name: `${functionName}:${role}:simulated`,
-                signature: step.signature,
-                computeUnits: step.computeUnits,
-                ok: true,
-                err: null,
-            };
-        }
-        return step;
+        return sendIx(this.connection, this.payer, ix, signers, `${functionName}:${role}`);
     }
     async initGame(turnTimeoutSecs = 120) {
-        this.state.config.turnTimeoutSecs = turnTimeoutSecs;
-        this.state.config.allowOpenMatches = true;
-        this.state.config.allowInvites = true;
-        this.state.config.nonce = 0;
-        return [];
+        const steps = [];
+        steps.push(await this.call('init_config', 'p1', {
+            turn_timeout_secs: turnTimeoutSecs,
+            allow_open_matches: 1,
+            allow_invites: 1,
+        }));
+        steps.push(await this.call('init_profile', 'p1', {}));
+        steps.push(await this.call('init_profile', 'p2', {}));
+        if (steps.every((s) => s.ok)) {
+            this.state.config.turnTimeoutSecs = turnTimeoutSecs;
+            this.state.config.allowOpenMatches = true;
+            this.state.config.allowInvites = true;
+            this.state.config.nonce = 0;
+        }
+        return steps;
     }
     async nowSlot() {
         return Number(await this.connection.getSlot('confirmed'));
@@ -428,8 +453,9 @@ export class LocalnetTicTacToeEngine {
         this.state.board = new Array(9).fill(0);
     }
     async createOpen() {
-        const chain = await this.call('create_open_match', 'p1', {});
-        const step = chain.ok ? chain : { ...chain, ok: true, err: null, name: 'create_open_match:p1:local' };
+        const step = await this.call('create_open_match', 'p1', {});
+        if (!step.ok)
+            return step;
         this.state.config.nonce += 1;
         const now = await this.nowSlot();
         this.resetBoard();
@@ -450,8 +476,9 @@ export class LocalnetTicTacToeEngine {
         return step;
     }
     async createInvite() {
-        const chain = await this.call('create_invite_match', 'p1', {});
-        const step = chain.ok ? chain : { ...chain, ok: true, err: null, name: 'create_invite_match:p1:local' };
+        const step = await this.call('create_invite_match', 'p1', {});
+        if (!step.ok)
+            return step;
         this.state.config.nonce += 1;
         const now = await this.nowSlot();
         this.resetBoard();
@@ -482,8 +509,9 @@ export class LocalnetTicTacToeEngine {
         if (this.state.match.invitedRequired && joining !== this.state.match.invitedPlayer) {
             return { name: 'join_match:local', signature: null, computeUnits: null, ok: false, err: 'not invited' };
         }
-        const chain = await this.call('join_match', role, {});
-        const step = chain.ok ? chain : { ...chain, ok: true, err: null, name: `join_match:${role}:local` };
+        const step = await this.call('join_match', role, {});
+        if (!step.ok)
+            return step;
         const now = await this.nowSlot();
         this.state.match.player2 = this.rolePubkey(role);
         this.state.match.status = MATCH_ACTIVE;
@@ -496,8 +524,9 @@ export class LocalnetTicTacToeEngine {
         if (this.state.match.status !== MATCH_WAITING) {
             return { name: 'start_single_player:local', signature: null, computeUnits: null, ok: false, err: 'match not waiting' };
         }
-        const chain = await this.call('start_single_player', 'p1', {});
-        const step = chain.ok ? chain : { ...chain, ok: true, err: null, name: 'start_single_player:p1:local' };
+        const step = await this.call('start_single_player', 'p1', {});
+        if (!step.ok)
+            return step;
         const now = await this.nowSlot();
         this.state.match.player2 = this.rolePubkey('p1');
         this.state.match.status = MATCH_ACTIVE;
@@ -521,8 +550,9 @@ export class LocalnetTicTacToeEngine {
         if (this.state.board[cell] !== 0) {
             return { name: 'play_ttt:local', signature: null, computeUnits: null, ok: false, err: 'cell occupied' };
         }
-        const chain = await this.call('play_ttt', role, { cell_index: cell });
-        const step = chain.ok ? chain : { ...chain, ok: true, err: null, name: `play_ttt:${role}:local` };
+        const step = await this.call('play_ttt', role, { cell_index: cell });
+        if (!step.ok)
+            return step;
         this.state.board[cell] = seat;
         this.state.match.lastMoveIndex = cell;
         this.state.match.moveCount += 1;
@@ -564,8 +594,9 @@ export class LocalnetTicTacToeEngine {
         if (this.state.board[playerCell] !== 0) {
             return { name: 'play_ttt_single:local', signature: null, computeUnits: null, ok: false, err: 'cell occupied' };
         }
-        const chain = await this.call('play_ttt_single', 'p1', { cell_index: playerCell });
-        const step = chain.ok ? chain : { ...chain, ok: true, err: null, name: 'play_ttt_single:p1:local' };
+        const step = await this.call('play_ttt_single', 'p1', { cell_index: playerCell });
+        if (!step.ok)
+            return step;
         this.state.board[playerCell] = WINNER_P1;
         this.state.match.lastMoveIndex = playerCell;
         this.state.match.moveCount += 1;
@@ -622,8 +653,9 @@ export class LocalnetTicTacToeEngine {
         return { attempted: true, cell: { row, col }, result };
     }
     async claimTimeout(role) {
-        const chain = await this.call('claim_timeout', role, {});
-        const step = chain.ok ? chain : { ...chain, ok: true, err: null, name: `claim_timeout:${role}:local` };
+        const step = await this.call('claim_timeout', role, {});
+        if (!step.ok)
+            return step;
         const now = await this.nowSlot();
         const winner = role === 'p1' ? WINNER_P1 : WINNER_P2;
         this.state.match.winner = winner;
@@ -632,8 +664,9 @@ export class LocalnetTicTacToeEngine {
         return step;
     }
     async resign(role) {
-        const chain = await this.call('resign', role, {});
-        const step = chain.ok ? chain : { ...chain, ok: true, err: null, name: `resign:${role}:local` };
+        const step = await this.call('resign', role, {});
+        if (!step.ok)
+            return step;
         const now = await this.nowSlot();
         const winner = role === 'p1' ? WINNER_P2 : WINNER_P1;
         this.state.match.winner = winner;
@@ -642,8 +675,9 @@ export class LocalnetTicTacToeEngine {
         return step;
     }
     async cancel() {
-        const chain = await this.call('cancel_waiting_match', 'p1', {});
-        const step = chain.ok ? chain : { ...chain, ok: true, err: null, name: 'cancel_waiting_match:p1:local' };
+        const step = await this.call('cancel_waiting_match', 'p1', {});
+        if (!step.ok)
+            return step;
         this.state.match.status = MATCH_CANCELLED;
         this.state.match.winner = WINNER_NONE;
         this.state.match.endedAtTs = await this.nowSlot();

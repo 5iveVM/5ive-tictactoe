@@ -161,12 +161,12 @@ pub join_match(
 
 pub start_single_player(
     match_state: MatchState @mut,
-    caller: account @signer
+    caller: account @session
 ) {
     require(match_state.status == 0);
-    require(caller.ctx.key == match_state.player1);
 
-    match_state.player2 = caller.ctx.key;
+    // Delegated session callers act on behalf of player1.
+    match_state.player2 = match_state.player1;
     match_state.status = 1;
     match_state.current_turn = 1;
 
@@ -177,7 +177,7 @@ pub start_single_player(
 
 pub play_ttt(
     match_state: MatchState @mut,
-    caller: account @signer,
+    caller: account @session,
     cell_index: u64
 ) {
     require(match_state.status == 1);
@@ -208,17 +208,29 @@ pub play_ttt(
 
 pub play_ttt_single(
     match_state: MatchState @mut,
-    caller: account @signer,
+    caller: account @session,
     cell_index: u64
 ) {
-    play_ttt(match_state, caller, cell_index);
+    require(match_state.status == 1);
+    require(cell_index < 9);
+    require(match_state.current_turn == 1);
+
+    // Single-player mode: delegated caller may differ from player1 key.
+    match_state.last_move_index = cell_index;
+    match_state.move_count = match_state.move_count + 1;
 
     if match_state.status != 1 {
         return;
     }
-    if match_state.current_turn != 2 {
+
+    if match_state.move_count >= 9 {
+        match_state.status = 4;
+        match_state.winner = 0;
+        match_state.ended_at_ts = now_slot();
         return;
     }
+
+    match_state.current_turn = 2;
 
     match_state.last_move_index = (cell_index + 1) % 9;
     match_state.move_count = match_state.move_count + 1;
@@ -236,7 +248,7 @@ pub play_ttt_single(
 
 pub play_cpu_random(
     match_state: MatchState @mut,
-    caller: account @signer
+    caller: account @session
 ) {
     require(match_state.status == 1);
     require(caller.ctx.key == match_state.player1);
@@ -260,7 +272,7 @@ pub play_cpu_random(
 
 pub claim_timeout(
     match_state: MatchState @mut,
-    caller: account @signer
+    caller: account @session
 ) {
     require(match_state.status == 1);
 
@@ -279,7 +291,7 @@ pub claim_timeout(
 
 pub resign(
     match_state: MatchState @mut,
-    caller: account @signer
+    caller: account @session
 ) {
     require(match_state.status == 1);
 
@@ -298,7 +310,7 @@ pub resign(
 
 pub cancel_waiting_match(
     match_state: MatchState @mut,
-    caller: account @signer
+    caller: account @session
 ) {
     require(match_state.status == 0);
     require(caller.ctx.key == match_state.player1);

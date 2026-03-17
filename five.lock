@@ -1,0 +1,28 @@
+version = 1
+
+[[packages]]
+name = "5ive-tictactoe"
+version = "0.0.0"
+address = "EXetd9HU3m7EsUGnVg8T5vtE3UGp8cvyZQba9aVdVeDa"
+bytecode_hash = "42bb210f2877066079d812fef24345e66be49dcc30aa51485e487840387ad7b0"
+deployed_at = "2026-03-17T19:47:52.109Z"
+
+  [packages.exports]
+  methods = [
+  "init_config",
+  "init_profile",
+  "create_open_match",
+  "create_invite_match",
+  "join_match",
+  "start_single_player",
+  "play_ttt",
+  "play_ttt_single",
+  "play_cpu_random",
+  "claim_timeout",
+  "resign",
+  "cancel_waiting_match",
+  "get_match_status",
+  "get_match_turn",
+  "get_match_winner"
+]
+  interfaces = [ ]

@@ -40,3 +40,17 @@ Run:
 npm run client:gui:localnet
 ```
 Open `http://127.0.0.1:4178`.
+
+## Session Regression Smoke
+Validate sessionized gameplay in both direct mode and delegated mode:
+
+```bash
+# localnet
+FIVE_VM_PROGRAM_ID=<local_vm_program_id> \
+FIVE_SCRIPT_ACCOUNT=<deployed_script> \
+FIVE_SESSION_MANAGER_SCRIPT_ACCOUNT=<optional_noncanonical_manager_script> \
+npm run test:session-smoke:localnet
+
+# devnet
+FIVE_SCRIPT_ACCOUNT=<deployed_script> npm run test:session-smoke:devnet
+```
