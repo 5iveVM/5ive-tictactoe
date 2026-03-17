@@ -29,3 +29,4 @@ Thumbs.db
 # 5IVE VM
 .five/cache/
 *.debug.bin
+.reports/
