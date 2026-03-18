@@ -3,9 +3,9 @@ version = 1
 [[packages]]
 name = "5ive-tictactoe"
 version = "0.0.0"
-address = "EXetd9HU3m7EsUGnVg8T5vtE3UGp8cvyZQba9aVdVeDa"
-bytecode_hash = "42bb210f2877066079d812fef24345e66be49dcc30aa51485e487840387ad7b0"
-deployed_at = "2026-03-17T19:47:52.109Z"
+address = "4FhigcfoHwJXVEaFBXHUFcxmYQakr92pLCZvE4DFUhSW"
+bytecode_hash = "9ba11ef10f6e21feeeb57d50edd7dd0a52c50fe2d19076a4801c6b0e9954d883"
+deployed_at = "2026-03-18T05:32:28.167Z"
 
   [packages.exports]
   methods = [
