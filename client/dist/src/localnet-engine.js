@@ -271,7 +271,7 @@ export class LocalnetTicTacToeEngine {
                 : network === 'devnet'
                     ? 'https://api.devnet.solana.com'
                     : 'https://api.mainnet-beta.solana.com');
-        const fiveVmProgramId = process.env.FIVE_VM_PROGRAM_ID || '5ive5uKDkc3Yhyfu1Sk7i3eVPDQUmG2GmTm2FnUZiTJd';
+        const fiveVmProgramId = process.env.FIVE_VM_PROGRAM_ID || '5ive5hbC3aRsvq37MP5m4sHtTSFxT4Cq1smS4ddyWJ6h';
         const connection = new Connection(rpcUrl, 'confirmed');
         const payer = await loadPayer();
         const player2 = Keypair.generate();
