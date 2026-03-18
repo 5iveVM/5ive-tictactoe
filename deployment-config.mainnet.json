@@ -2,7 +2,8 @@
   "network": "mainnet",
   "rpcUrl": "https://api.mainnet-beta.solana.com",
   "fiveProgramId": "5ive5uKDkc3Yhyfu1Sk7i3eVPDQUmG2GmTm2FnUZiTJd",
-  "vmStatePda": "<SET_AFTER_VM_INIT>",
-  "tictactoeScriptAccount": "<SET_AFTER_TICTACTOE_DEPLOY>",
-  "updatedAt": "2026-03-11T00:00:00Z"
+  "vmStatePda": "ADQaL87GCvMAuYV13RCnPHb4ivfQVkc5uLg3EgetKpYZ",
+  "tictactoeScriptAccount": "Hu6mxNzeXsHuX31eS3516YdisVpmkzJkEZibMzNJhKnJ",
+  "tictactoeConfigAccount": "DAmjCd3fdVE9WqbuweRewihnChQ4J4jc5mtuqxde5foG",
+  "updatedAt": "2026-03-18T00:00:00Z"
 }
