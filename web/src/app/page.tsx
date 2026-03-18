@@ -886,22 +886,24 @@ export default function Home() {
       : "Start a match.";
 
   return (
-    <div className="h-[100dvh] relative overflow-hidden flex flex-col bg-cyan-950">
+    <div className="h-[100dvh] relative overflow-hidden flex flex-col bg-[#232136]">
       <Navbar status={status} moveCount={match.moveCount} mode={playMode} />
 
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(34,211,238,0.15)_0%,_rgba(8,47,73,1)_100%)] pointer-events-none z-0" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(196,167,231,0.16)_0%,_rgba(35,33,54,1)_100%)] pointer-events-none z-0" />
       <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/black-paper.png')] pointer-events-none mix-blend-overlay z-0" />
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-3 md:px-6 pt-20 pb-3 relative z-10 min-h-0 overflow-hidden">
         <div className="grid h-full min-h-0 gap-3 grid-rows-[minmax(0,1fr)_auto] md:grid-rows-1 md:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
-          <section className="rounded-3xl border border-cyan-300/15 bg-black/35 backdrop-blur-xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.45)] flex flex-col items-center justify-center min-h-0">
-            <h2 className="text-3xl font-black uppercase tracking-[0.2em] text-cyan-100">TicTacToe</h2>
-            <p className="mt-2 text-xs uppercase tracking-widest text-cyan-200/75">{resultBanner}</p>
+          <section className="ttt-card rounded-3xl p-4 flex flex-col items-center justify-center min-h-0">
+            <h2 className="ttt-title text-3xl font-black uppercase tracking-[0.2em]">TicTacToe</h2>
+            <p className="mt-2 text-xs uppercase tracking-[0.16em] text-[#cbd5e1]">{resultBanner}</p>
             <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3 w-[280px] sm:w-[340px]">
               {match.board.map((v, idx) => (
                 <button
                   key={idx}
-                  className="aspect-square rounded-xl border border-cyan-300/20 bg-cyan-500/10 text-4xl font-black text-cyan-100 hover:bg-cyan-500/20 disabled:opacity-40"
+                  className={`ttt-cell aspect-square rounded-xl text-4xl font-black disabled:opacity-40 ${
+                    v === 1 ? "text-[#06b6d4] [text-shadow:0_0_15px_rgba(6,182,212,0.6)]" : ""
+                  } ${v === 2 ? "text-[#ec4899] [text-shadow:0_0_15px_rgba(236,72,153,0.6)]" : ""}`}
                   disabled={!canMove || v !== 0}
                   onClick={() => runAction(`move ${idx}`, async () => playSingle(idx))}
                 >
@@ -911,17 +913,17 @@ export default function Home() {
             </div>
           </section>
 
-          <aside className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl p-3 md:p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col gap-2 md:gap-3 min-h-0 max-h-none md:max-h-[calc(100dvh-6.5rem)] overflow-hidden md:overflow-y-auto">
+          <aside className="ttt-card rounded-3xl p-3 md:p-4 flex flex-col gap-2 md:gap-3 min-h-0 max-h-none md:max-h-[calc(100dvh-6.5rem)] overflow-hidden md:overflow-y-auto">
             <div className="grid grid-cols-2 gap-2">
               <button
-                className="rounded-xl border border-cyan-300/30 bg-cyan-500/20 px-3 py-2 text-xs font-bold uppercase tracking-wider text-cyan-50 hover:bg-cyan-500/30 disabled:opacity-40"
+                className="rounded-xl border border-transparent bg-gradient-to-br from-[#3b82f6] to-[#6366f1] px-3 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-[0_4px_15px_rgba(99,102,241,0.3)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.5)] disabled:opacity-40"
                 disabled={!walletConnected || busy || !!accounts?.profile}
                 onClick={() => runAction("initialize", initializeGame)}
               >
                 {accounts?.profile ? "Profile Ready" : "Init Profile"}
               </button>
               <button
-                className="rounded-xl border border-cyan-300/30 bg-cyan-500/20 px-3 py-2 text-xs font-bold uppercase tracking-wider text-cyan-50 hover:bg-cyan-500/30 disabled:opacity-40"
+                className="rounded-xl border border-transparent bg-gradient-to-br from-[#3b82f6] to-[#6366f1] px-3 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-[0_4px_15px_rgba(99,102,241,0.3)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.5)] disabled:opacity-40"
                 disabled={!walletConnected || busy}
                 onClick={() => runAction("new single match", createSingleMatch)}
               >
@@ -929,21 +931,21 @@ export default function Home() {
               </button>
             </div>
 
-            <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-2 text-xs font-mono text-cyan-100/80">
+            <div className="rounded-xl border border-[#f6c177]/30 bg-[#2a273f]/65 p-2 text-xs font-mono text-[#e0def4]/80">
               <div className="mb-2 flex items-center justify-between">
                 <div className="relative group/session-help flex items-center gap-1.5">
-                  <div className="uppercase tracking-widest text-cyan-300/70">Session</div>
+                  <div className="uppercase tracking-widest text-[#f6c177]/80">Session</div>
                   <button
                     type="button"
-                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-cyan-300/35 text-[9px] font-bold text-cyan-200/90 hover:bg-cyan-400/15"
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[#f6c177]/45 text-[9px] font-bold text-[#f6c177]/90 hover:bg-[#f6c177]/15"
                   >
                     ?
                   </button>
-                  <div className="pointer-events-none absolute left-0 top-6 z-20 hidden w-64 rounded-lg border border-cyan-300/30 bg-cyan-950/95 p-2 text-[10px] font-medium normal-case leading-relaxed tracking-normal text-cyan-100 shadow-xl group-hover/session-help:block group-focus-within/session-help:block">
+                  <div className="pointer-events-none absolute left-0 top-6 z-20 hidden w-64 rounded-lg border border-[#c4a7e7]/35 bg-[#232136]/95 p-2 text-[10px] font-medium normal-case leading-relaxed tracking-normal text-[#e0def4] shadow-xl group-hover/session-help:block group-focus-within/session-help:block">
                     Session mode lets you approve once, then a delegate can submit your moves until the session expires.
                   </div>
                 </div>
-                <span className="rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider bg-white/10 text-cyan-100/80">
+                <span className="rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider bg-white/10 text-[#e0def4]/80">
                   {session.status}
                 </span>
               </div>
@@ -951,8 +953,8 @@ export default function Home() {
                 <button
                   className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
                     playMode === "direct"
-                      ? "border border-cyan-300/50 bg-cyan-500/25 text-cyan-100"
-                      : "border border-white/15 bg-white/5 text-cyan-100 hover:bg-white/10"
+                      ? "border border-[#c4a7e7]/50 bg-[#c4a7e7]/25 text-[#e0def4]"
+                      : "border border-white/15 bg-white/5 text-[#e0def4] hover:bg-white/10"
                   }`}
                   disabled={busy}
                   onClick={() => setPlayMode("direct")}
@@ -962,8 +964,8 @@ export default function Home() {
                 <button
                   className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
                     playMode === "session"
-                      ? "border border-cyan-300/50 bg-cyan-500/25 text-cyan-100"
-                      : "border border-white/15 bg-white/5 text-cyan-100 hover:bg-white/10"
+                      ? "border border-[#c4a7e7]/50 bg-[#c4a7e7]/25 text-[#e0def4]"
+                      : "border border-white/15 bg-white/5 text-[#e0def4] hover:bg-white/10"
                   }`}
                   disabled={busy}
                   onClick={() => setPlayMode("session")}
@@ -973,14 +975,14 @@ export default function Home() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  className="rounded-lg border border-cyan-400/40 bg-cyan-500/20 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-cyan-100 hover:bg-cyan-500/30 disabled:opacity-40"
+                  className="rounded-lg border border-transparent bg-gradient-to-br from-[#3b82f6] to-[#6366f1] px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white disabled:opacity-40"
                   disabled={!walletConnected || busy || !accounts || !accounts.match_state}
                   onClick={() => runAction("create session", createSession)}
                 >
                   Create Session
                 </button>
                 <button
-                  className="rounded-lg border border-rose-400/40 bg-rose-500/20 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-rose-100 hover:bg-rose-500/30 disabled:opacity-40"
+                  className="rounded-lg border border-transparent bg-gradient-to-br from-[#ef4444] to-[#f43f5e] px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white disabled:opacity-40"
                   disabled={!walletConnected || busy || !session.sessionAccount}
                   onClick={() => runAction("revoke session", revokeSession)}
                 >
@@ -989,13 +991,13 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-black/25 p-2 text-[10px] font-mono text-cyan-500/80 space-y-1 break-words">
+            <div className="rounded-xl border border-white/10 bg-black/25 p-2 text-[10px] font-mono text-[#9ccfd8]/85 space-y-1 break-words">
               <div>vm: {vmProgramId}</div>
               <div>script: {scriptAccount || "MISSING NEXT_PUBLIC_FIVE_SCRIPT_ACCOUNT_DEVNET/MAINNET"}</div>
               <div>network: {network}</div>
               <div>rpc: {endpoint}</div>
               <div>match: {statusLabel(match.status)} turn={match.currentTurn} moves={match.moveCount}</div>
-              <div className="break-words whitespace-pre-wrap text-rose-300/90">last_error: {lastTxError || "none"}</div>
+              <div className="break-words whitespace-pre-wrap text-[#eb6f92]/90">last_error: {lastTxError || "none"}</div>
               <div>
                 accounts:{" "}
                 {accounts ? (
@@ -1004,7 +1006,7 @@ export default function Home() {
                       href={`https://solscan.io/account/${accounts.config}${solscanClusterSuffix}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-cyan-300 hover:underline"
+                      className="text-[#9ccfd8] hover:underline"
                     >
                       c={shortKey(accounts.config)}
                     </a>{" "}
@@ -1013,7 +1015,7 @@ export default function Home() {
                         href={`https://solscan.io/account/${accounts.match_state}${solscanClusterSuffix}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-cyan-300 hover:underline"
+                        className="text-[#9ccfd8] hover:underline"
                       >
                         m={shortKey(accounts.match_state)}
                       </a>
@@ -1024,7 +1026,7 @@ export default function Home() {
                       href={`https://solscan.io/account/${accounts.profile}${solscanClusterSuffix}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-cyan-300 hover:underline"
+                      className="text-[#9ccfd8] hover:underline"
                     >
                       p={shortKey(accounts.profile)}
                     </a>
@@ -1042,7 +1044,7 @@ export default function Home() {
                         href={`https://solscan.io/tx/${sig}${solscanClusterSuffix}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-cyan-300 hover:underline"
+                        className="text-[#9ccfd8] hover:underline"
                       >
                         {shortSig(sig)}
                       </a>
