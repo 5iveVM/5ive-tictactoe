@@ -1,6 +1,6 @@
 {
   "network": "devnet",
-  "rpcUrl": "https://solana-devnet.g.alchemy.com/v2/iYUHtW5GGIvK7hTlORbC9",
+  "rpcUrl": "https://api.devnet.solana.com",
   "fiveProgramId": "55555SyrYLzydvDMBhAL8uo6h4WETHTm81z8btf6nAVJ",
   "vmStatePda": "7utm673i6SYNBkBsjpD4fBo9oXP6U5AkvVHrSwBrAPMf",
   "tictactoeScriptAccount": "3RMvPbo2D8cMAbpkhpPK6aW4DfbwCyDrY4DvoSTQMFKb",
