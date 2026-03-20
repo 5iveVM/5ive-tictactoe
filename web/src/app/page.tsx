@@ -252,6 +252,36 @@ function isUserRejectedWalletAction(message: string): boolean {
   return /user rejected|rejected the request|declined|cancelled/i.test(message);
 }
 
+function isBlockhashExpiryError(message: string): boolean {
+  return /block height exceeded|blockhash not found|transactionexpiredblockheightexceedederror/i.test(
+    message
+  );
+}
+
+async function confirmSignatureByPolling(
+  connection: Connection,
+  signature: string,
+  timeoutMs = 75_000
+) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const response = await connection.getSignatureStatuses([signature], {
+      searchTransactionHistory: true,
+    });
+    const status = response.value[0];
+    if (status) {
+      if (status.err) {
+        throw new Error(`transaction failed on-chain: ${JSON.stringify(status.err)}`);
+      }
+      if (status.confirmationStatus === "confirmed" || status.confirmationStatus === "finalized") {
+        return;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+  }
+  throw new Error("transaction confirmation timed out");
+}
+
 function accountsStorageKey(input: {
   network: NetworkName | "localnet";
   wallet: string;
@@ -295,7 +325,7 @@ function readStoredAccounts(input: {
   scriptAccount: string;
 }): GameAccounts | null {
   if (typeof window === "undefined") return null;
-  if (input.network === "localnet" || !input.wallet || !input.scriptAccount) return null;
+  if (!input.wallet || !input.scriptAccount) return null;
   const raw = window.localStorage.getItem(
     accountsStorageKey({
       network: input.network,
@@ -326,7 +356,7 @@ function persistAccounts(input: {
   accounts: GameAccounts;
 }) {
   if (typeof window === "undefined") return;
-  if (input.network === "localnet" || !input.wallet || !input.scriptAccount) return;
+  if (!input.wallet || !input.scriptAccount) return;
   window.localStorage.setItem(
     accountsStorageKey({
       network: input.network,
@@ -629,7 +659,7 @@ function assertCanonicalSessionState(input: {
 export default function Home() {
   const { connection } = useConnection();
   const wallet = useWallet();
-  const { network, endpoint } = useNetworkConfig();
+  const { network, displayEndpoint } = useNetworkConfig();
 
   const [status, setStatus] = useState("ready");
   const [lastTxError, setLastTxError] = useState<string | null>(null);
@@ -1005,36 +1035,72 @@ export default function Home() {
     options?: { feePayer?: PublicKey; requireWalletSignature?: boolean }
   ) {
     if (!wallet.publicKey && !options?.feePayer) throw new Error("Connect wallet first.");
-    tx.feePayer = options?.feePayer || wallet.publicKey || undefined;
-    const latest = await connection.getLatestBlockhash("confirmed");
-    tx.recentBlockhash = latest.blockhash;
-    if (extraSigners.length > 0) tx.partialSign(...extraSigners);
-    let sig = "";
+    const feePayer = options?.feePayer || wallet.publicKey || undefined;
+    const requireWalletSignature = options?.requireWalletSignature ?? true;
 
-    try {
-      const requireWalletSignature = options?.requireWalletSignature ?? true;
-      if (!requireWalletSignature) {
-        sig = await connection.sendRawTransaction(tx.serialize(), { ...CONFIRM_OPTS, maxRetries: 3 });
-      } else if (wallet.signTransaction) {
-        const signed = await wallet.signTransaction(tx);
-        sig = await connection.sendRawTransaction(signed.serialize(), { ...CONFIRM_OPTS, maxRetries: 3 });
-      } else if (wallet.sendTransaction) {
-        sig = await wallet.sendTransaction(tx, connection, CONFIRM_OPTS);
-      } else {
-        throw new Error("Wallet does not support signTransaction/sendTransaction.");
+    const confirmSubmittedSignature = async (signature: string): Promise<string> => {
+      // Rely on explicit HTTP polling to avoid websocket subscribe hangs on some RPC providers.
+      await confirmSignatureByPolling(connection, signature);
+      return signature;
+    };
+
+    const logConfirmedSignature = async (signature: string): Promise<string> => {
+      pushSig(signature);
+      return signature;
+    };
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const attemptTx = new Transaction().add(...tx.instructions);
+      attemptTx.feePayer = feePayer;
+      const latest = await connection.getLatestBlockhash("confirmed");
+      attemptTx.recentBlockhash = latest.blockhash;
+      let sig = "";
+
+      try {
+        const simulated = await connection.simulateTransaction(attemptTx);
+        if (simulated.value.err) {
+          const logs = simulated.value.logs?.length ? `\n${simulated.value.logs.join("\n")}` : "";
+          throw new Error(`preflight simulation failed: ${JSON.stringify(simulated.value.err)}${logs}`);
+        }
+
+        if (!requireWalletSignature) {
+          if (extraSigners.length > 0) attemptTx.partialSign(...extraSigners);
+          sig = await connection.sendRawTransaction(attemptTx.serialize(), { ...CONFIRM_OPTS, maxRetries: 3 });
+        } else if (wallet.signTransaction) {
+          // Phantom guidance: get wallet signature first, then attach additional signer signatures.
+          const signedByWallet = await wallet.signTransaction(attemptTx);
+          if (extraSigners.length > 0) signedByWallet.partialSign(...extraSigners);
+          sig = await connection.sendRawTransaction(signedByWallet.serialize(), {
+            ...CONFIRM_OPTS,
+            maxRetries: 3,
+          });
+        } else if (wallet.sendTransaction) {
+          sig = await wallet.sendTransaction(attemptTx, connection, {
+            ...CONFIRM_OPTS,
+            maxRetries: 3,
+            signers: extraSigners,
+          });
+        } else {
+          throw new Error("Wallet does not support signTransaction/sendTransaction.");
+        }
+      } catch (err) {
+        const message = errText(err);
+        if (isUserRejectedWalletAction(message)) throw new Error("wallet request cancelled");
+        throw new Error(`transaction submit failed: ${annotateVmError(message)}`);
       }
-    } catch (err) {
-      const message = errText(err);
-      if (isUserRejectedWalletAction(message)) throw new Error("wallet request cancelled");
-      throw new Error(`transaction submit failed: ${annotateVmError(message)}`);
+
+      try {
+        return await Promise.resolve(sig).then(confirmSubmittedSignature).then(logConfirmedSignature);
+      } catch (err) {
+        const message = errText(err);
+        if (attempt === 0 && isBlockhashExpiryError(message)) {
+          continue;
+        }
+        throw err;
+      }
     }
 
-    await connection.confirmTransaction(
-      { signature: sig, blockhash: latest.blockhash, lastValidBlockHeight: latest.lastValidBlockHeight },
-      "confirmed"
-    );
-    pushSig(sig);
-    return sig;
+    throw new Error("transaction confirm failed after retry");
   }
 
   async function provisionAccounts(): Promise<GameAccounts> {
@@ -1069,6 +1135,31 @@ export default function Home() {
       );
       await sendAndConfirm(new Transaction().add(initConfigIx), [config]);
       configPubkey = config.publicKey.toBase58();
+    }
+
+    const existingProfile = accounts?.profile || null;
+    if (existingProfile) {
+      try {
+        const profileInfo = await connection.getAccountInfo(new PublicKey(existingProfile), "confirmed");
+        if (profileInfo) {
+          const reused = {
+            config: configPubkey,
+            match_state: accounts?.match_state || null,
+            profile: existingProfile,
+          };
+          setAccounts(reused);
+          persistAccounts({
+            network,
+            wallet: wallet.publicKey.toBase58(),
+            vmProgramId,
+            scriptAccount,
+            accounts: reused,
+          });
+          return reused;
+        }
+      } catch {
+        // Fall through to create a fresh profile when stored state is stale.
+      }
     }
 
     const profile = Keypair.generate();
@@ -1223,7 +1314,7 @@ export default function Home() {
       bindAccount: accounts.match_state,
       nonce: session.nonce,
       payer: wallet.publicKey.toBase58(),
-      rpcLabel: endpoint,
+      rpcLabel: displayEndpoint,
     };
     const plan = await (sessionClient as unknown as {
       buildCreateSessionPlan: (
@@ -1241,7 +1332,7 @@ export default function Home() {
       payer: wallet.publicKey,
       delegateMinLamports: SESSION_DELEGATE_MIN_FEE_LAMPORTS,
       delegateTopupLamports: SESSION_DELEGATE_TOPUP_LAMPORTS,
-      rpcLabel: endpoint,
+      rpcLabel: displayEndpoint,
     });
     const tx = new Transaction();
     if (plan.createSessionAccountIx) {
@@ -1493,7 +1584,7 @@ export default function Home() {
       <div className="absolute inset-0 grid-bg pointer-events-none z-0" />
       <div className="scanline z-50 pointer-events-none" />
       
-      <Navbar status={status} moveCount={match.moveCount} mode={playMode} />
+      <Navbar moveCount={match.moveCount} mode={playMode} />
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-8 pt-24 pb-6 relative z-10 flex flex-col min-h-0 overflow-hidden">
         <div className="grid h-full gap-6 lg:grid-cols-[1fr_380px] min-h-0">

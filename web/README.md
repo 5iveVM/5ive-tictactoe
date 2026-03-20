@@ -18,6 +18,9 @@ Then open `http://localhost:3000`.
 ## Notes
 
 - Set `NEXT_PUBLIC_FIVE_SCRIPT_ACCOUNT` to your deployed tictactoe script account.
+- Devnet RPC requests are proxied through `/api/solana-devnet` and use server-only `SOLANA_DEVNET_RPC_URL`.
+- Mainnet RPC requests are proxied through `/api/solana-mainnet` and use server-only `SOLANA_MAINNET_RPC_URL`.
+- Keep `SOLANA_DEVNET_RPC_URL` and `SOLANA_MAINNET_RPC_URL` non-public (no `NEXT_PUBLIC_` prefix).
 - Use `Provision Accounts` and `Init Config/Profile` once per wallet.
 - `New Single Match` creates an open match and starts single-player mode.
 - Use `Use Direct Calls` to test without session delegation.
