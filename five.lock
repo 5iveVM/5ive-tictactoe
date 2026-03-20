@@ -3,9 +3,9 @@ version = 1
 [[packages]]
 name = "5ive-tictactoe"
 version = "0.0.0"
-address = "Hu6mxNzeXsHuX31eS3516YdisVpmkzJkEZibMzNJhKnJ"
-bytecode_hash = "9ba11ef10f6e21feeeb57d50edd7dd0a52c50fe2d19076a4801c6b0e9954d883"
-deployed_at = "2026-03-18T06:09:32.644Z"
+address = "EURPiskXDCicEop78uV5VRBXABecfR588XJbmiYKLVGU"
+bytecode_hash = "763a10278a4577115b479bd7e11db0473ac5e96a9d717da22765a96b27f91d6c"
+deployed_at = "2026-03-20T08:33:04.212Z"
 
   [packages.exports]
   methods = [
@@ -21,6 +21,7 @@ deployed_at = "2026-03-18T06:09:32.644Z"
   "claim_timeout",
   "resign",
   "cancel_waiting_match",
+  "close_finished_match",
   "get_match_status",
   "get_match_turn",
   "get_match_winner"

@@ -1,24 +1,23 @@
-import { readFile, readdir } from 'fs/promises';
-import { homedir } from 'os';
-import { join } from 'path';
+import { readFile } from 'fs/promises';
 import {
   Connection,
   Keypair,
   PublicKey,
-  SystemProgram,
   Transaction,
   TransactionInstruction,
-  type ConfirmOptions,
 } from '@solana/web3.js';
-import { FiveProgram, FiveSDK } from '@5ive-tech/sdk';
+import {
+  FiveProgram,
+  FiveSDK,
+  fundWalletForTests,
+  loadDefaultPayerKeypair,
+  resolveFiveArtifactPath,
+  sendEncodedInstruction,
+  type LocalnetStepResult,
+} from '@5ive-tech/sdk';
+import { resolveClientRuntimeConfig } from './runtime-config.js';
 
-export type StepResult = {
-  name: string;
-  signature: string | null;
-  computeUnits: number | null;
-  ok: boolean;
-  err: string | null;
-};
+export type StepResult = LocalnetStepResult;
 
 export type Role = 'p1' | 'p2' | 'p3';
 
@@ -70,178 +69,6 @@ const WINNER_NONE = 0;
 const WINNER_P1 = 1;
 const WINNER_P2 = 2;
 
-const CONFIRM: ConfirmOptions = {
-  commitment: 'confirmed',
-  preflightCommitment: 'confirmed',
-  skipPreflight: false,
-};
-
-function parseConsumedUnits(logs: string[] | null | undefined): number | null {
-  if (!logs) return null;
-  for (const line of logs) {
-    const m = line.match(/consumed (\d+) of/);
-    if (m) return Number(m[1]);
-  }
-  return null;
-}
-
-async function resolveArtifactPath(projectRoot: string): Promise<string> {
-  const buildDir = join(projectRoot, 'build');
-  const mainPath = join(buildDir, 'main.five');
-  try {
-    await readFile(mainPath, 'utf8');
-    return mainPath;
-  } catch {
-    const entries = await readdir(buildDir);
-    const firstFive = entries.find((name) => name.endsWith('.five'));
-    if (!firstFive) {
-      throw new Error(`No .five artifact found in ${buildDir}. Run npm run build from project root.`);
-    }
-    return join(buildDir, firstFive);
-  }
-}
-
-async function loadPayer(): Promise<Keypair> {
-  const path = process.env.SOLANA_KEYPAIR_PATH || join(homedir(), '.config/solana/id.json');
-  const secret = JSON.parse(await readFile(path, 'utf8')) as number[];
-  return Keypair.fromSecretKey(new Uint8Array(secret));
-}
-
-async function sendIx(
-  connection: Connection,
-  payer: Keypair,
-  encoded: any,
-  extraSigners: Keypair[] = [],
-  name: string
-): Promise<StepResult> {
-  const tx = new Transaction().add(
-    new TransactionInstruction({
-      programId: new PublicKey(encoded.programId),
-      keys: encoded.keys.map((k: any) => ({
-        pubkey: new PublicKey(k.pubkey),
-        isSigner: k.isSigner,
-        isWritable: k.isWritable,
-      })),
-      data: Buffer.from(encoded.data, 'base64'),
-    })
-  );
-
-  try {
-    const signature = await connection.sendTransaction(tx, [payer, ...extraSigners], CONFIRM);
-    const latest = await connection.getLatestBlockhash('confirmed');
-    await connection.confirmTransaction({ signature, ...latest }, 'confirmed');
-    const txMeta = await connection.getTransaction(signature, {
-      commitment: 'confirmed',
-      maxSupportedTransactionVersion: 0,
-    });
-    const metaErr = txMeta?.meta?.err ?? null;
-    const cu = txMeta?.meta?.computeUnitsConsumed ?? parseConsumedUnits(txMeta?.meta?.logMessages);
-    return {
-      name,
-      signature,
-      computeUnits: cu,
-      ok: metaErr == null,
-      err: metaErr == null ? null : JSON.stringify(metaErr),
-    };
-  } catch (err) {
-    return {
-      name,
-      signature: null,
-      computeUnits: null,
-      ok: false,
-      err: err instanceof Error ? err.message : String(err),
-    };
-  }
-}
-
-async function createOwnedAccount(
-  connection: Connection,
-  payer: Keypair,
-  account: Keypair,
-  owner: PublicKey,
-  space: number
-): Promise<StepResult> {
-  const lamports = await connection.getMinimumBalanceForRentExemption(space);
-  const tx = new Transaction().add(
-    SystemProgram.createAccount({
-      fromPubkey: payer.publicKey,
-      newAccountPubkey: account.publicKey,
-      lamports,
-      space,
-      programId: owner,
-    })
-  );
-
-  try {
-    const signature = await connection.sendTransaction(tx, [payer, account], CONFIRM);
-    const latest = await connection.getLatestBlockhash('confirmed');
-    await connection.confirmTransaction({ signature, ...latest }, 'confirmed');
-    return {
-      name: `setup:create_account:${account.publicKey.toBase58()}`,
-      signature,
-      computeUnits: null,
-      ok: true,
-      err: null,
-    };
-  } catch (err) {
-    return {
-      name: `setup:create_account:${account.publicKey.toBase58()}`,
-      signature: null,
-      computeUnits: null,
-      ok: false,
-      err: err instanceof Error ? err.message : String(err),
-    };
-  }
-}
-
-async function fundWallet(
-  connection: Connection,
-  payer: Keypair,
-  wallet: PublicKey,
-  lamports: number,
-  useAirdrop: boolean
-): Promise<void> {
-  if (useAirdrop) {
-    const sig = await connection.requestAirdrop(wallet, lamports);
-    const latest = await connection.getLatestBlockhash('confirmed');
-    await connection.confirmTransaction({ signature: sig, ...latest }, 'confirmed');
-    return;
-  }
-
-  const tx = new Transaction().add(
-    SystemProgram.transfer({
-      fromPubkey: payer.publicKey,
-      toPubkey: wallet,
-      lamports,
-    })
-  );
-  const signature = await connection.sendTransaction(tx, [payer], CONFIRM);
-  const latest = await connection.getLatestBlockhash('confirmed');
-  await connection.confirmTransaction({ signature, ...latest }, 'confirmed');
-}
-
-async function deployScript(connection: Connection, payer: Keypair, loaded: any, fiveVmProgramId: string) {
-  let result: any = await FiveSDK.deployToSolana(loaded.bytecode, connection, payer, {
-    fiveVMProgramId: fiveVmProgramId,
-  });
-
-  if (!result.success) {
-    result = await FiveSDK.deployLargeProgramToSolana(loaded.bytecode, connection, payer, {
-      fiveVMProgramId: fiveVmProgramId,
-    });
-  }
-
-  const scriptAccount = result.scriptAccount || result.programId;
-  if (!result.success || !scriptAccount) {
-    throw new Error(`deploy failed: ${result.error || 'unknown error'}`);
-  }
-
-  return {
-    scriptAccount,
-    signature: result.transactionId || null,
-    deploymentCost: result.deploymentCost || null,
-  };
-}
 
 function idxTTT(row: number, col: number): number {
   return row * 3 + col;
@@ -367,22 +194,17 @@ export class LocalnetTicTacToeEngine {
   }
 
   static async create(projectRoot: string): Promise<LocalnetTicTacToeEngine> {
-    const artifactPath = await resolveArtifactPath(projectRoot);
+    const artifactPath = await resolveFiveArtifactPath(projectRoot);
     const artifactText = await readFile(artifactPath, 'utf8');
     const loaded = await FiveSDK.loadFiveFile(artifactText);
 
     const network = process.env.FIVE_NETWORK || 'localnet';
-    const rpcUrl =
-      process.env.FIVE_RPC_URL ||
-      (network === 'localnet'
-        ? 'http://127.0.0.1:8899'
-        : network === 'devnet'
-          ? 'https://api.devnet.solana.com'
-          : 'https://api.mainnet-beta.solana.com');
-    const fiveVmProgramId = process.env.FIVE_VM_PROGRAM_ID || '5ive5hbC3aRsvq37MP5m4sHtTSFxT4Cq1smS4ddyWJ6h';
+    const runtime = await resolveClientRuntimeConfig(projectRoot, network, process.env);
+    const rpcUrl = runtime.rpcUrl;
+    const fiveVmProgramId = runtime.fiveProgramId;
 
     const connection = new Connection(rpcUrl, 'confirmed');
-    const payer = await loadPayer();
+    const payer = await loadDefaultPayerKeypair();
     const player2 = Keypair.generate();
     const player3 = Keypair.generate();
 
@@ -395,14 +217,8 @@ export class LocalnetTicTacToeEngine {
       );
     }
 
-    const existingScript = process.env.FIVE_SCRIPT_ACCOUNT || '';
-    const useExistingScript = process.env.FIVE_USE_EXISTING_SCRIPT === '1';
-    const deploy =
-      existingScript && useExistingScript
-        ? { scriptAccount: existingScript }
-        : await deployScript(connection, payer, loaded, fiveVmProgramId);
-
-    const program = FiveProgram.fromABI(deploy.scriptAccount, loaded.abi, {
+    const scriptAccount = runtime.tictactoeScriptAccount;
+    const program = FiveProgram.fromABI(scriptAccount, loaded.abi, {
       fiveVMProgramId: fiveVmProgramId,
     });
 
@@ -413,14 +229,10 @@ export class LocalnetTicTacToeEngine {
     const profileP2Account = Keypair.generate();
 
     const setupSteps: StepResult[] = [];
-    setupSteps.push(await createOwnedAccount(connection, payer, configAccount, ownerProgram, 256));
-    setupSteps.push(await createOwnedAccount(connection, payer, matchAccount, ownerProgram, 2048));
-    setupSteps.push(await createOwnedAccount(connection, payer, profileP1Account, ownerProgram, 256));
-    setupSteps.push(await createOwnedAccount(connection, payer, profileP2Account, ownerProgram, 256));
 
     const useAirdrop = network === 'localnet';
     for (const wallet of [player2, player3]) {
-      await fundWallet(connection, payer, wallet.publicKey, 50_000_000, useAirdrop);
+      await fundWalletForTests(connection, payer, wallet.publicKey, 50_000_000, useAirdrop);
     }
 
     const failed = setupSteps.find((s) => !s.ok);
@@ -435,7 +247,7 @@ export class LocalnetTicTacToeEngine {
       player2,
       player3,
       fiveVmProgramId,
-      scriptAccount: deploy.scriptAccount,
+      scriptAccount,
       program,
       configAccount,
       matchAccount,
@@ -507,16 +319,50 @@ export class LocalnetTicTacToeEngine {
       functionName === 'resign' ||
       functionName === 'cancel_waiting_match'
     ) {
-      return {
+      const base: Record<string, string> = {
         match_state: this.matchAccount.publicKey.toBase58(),
         caller: roleKey,
-        __session: this.fiveVmProgramId,
       };
+      if (functionName === 'play_ttt_single' || functionName === 'start_single_player') {
+        base.__session = this.fiveVmProgramId;
+      }
+      return base;
     }
     if (functionName === 'get_match_status' || functionName === 'get_match_turn' || functionName === 'get_match_winner') {
       return { match_state: this.matchAccount.publicKey.toBase58() };
     }
     return {};
+  }
+
+  private applyInitSignerMeta(
+    functionName: string,
+    encoded: { keys: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }> }
+  ) {
+    let initAccount: string | null = null;
+    if (functionName === 'init_config') initAccount = this.configAccount.publicKey.toBase58();
+    if (functionName === 'init_profile') {
+      // Profile account depends on role in accountsFor(); both profiles are known locals.
+      const candidates = new Set([
+        this.profileP1Account.publicKey.toBase58(),
+        this.profileP2Account.publicKey.toBase58(),
+      ]);
+      for (const k of encoded.keys) {
+        if (candidates.has(k.pubkey)) {
+          initAccount = k.pubkey;
+          break;
+        }
+      }
+    }
+    if (functionName === 'create_open_match' || functionName === 'create_invite_match') {
+      initAccount = this.matchAccount.publicKey.toBase58();
+    }
+    if (!initAccount) return;
+    for (const key of encoded.keys) {
+      if (key.pubkey === initAccount) {
+        key.isSigner = true;
+        key.isWritable = true;
+      }
+    }
   }
 
   async buildUnsignedTx(
@@ -535,6 +381,7 @@ export class LocalnetTicTacToeEngine {
     }
 
     const encoded = await builder.instruction();
+    this.applyInitSignerMeta(functionName, encoded);
     const tx = new Transaction().add(
       new TransactionInstruction({
         programId: new PublicKey(encoded.programId),
@@ -551,7 +398,12 @@ export class LocalnetTicTacToeEngine {
     return tx.serialize({ requireAllSignatures: false, verifySignatures: false }).toString('base64');
   }
 
-  private async call(functionName: string, role: Role, args: Record<string, any> = {}): Promise<StepResult> {
+  private async call(
+    functionName: string,
+    role: Role,
+    args: Record<string, any> = {},
+    extraSigners: Keypair[] = []
+  ): Promise<StepResult> {
     const actor = this.keypairForRole(role);
     let builder = this.program
       .function(functionName)
@@ -563,8 +415,9 @@ export class LocalnetTicTacToeEngine {
     }
 
     const ix = await builder.instruction();
-    const signers = actor.publicKey.equals(this.payer.publicKey) ? [] : [actor];
-    return sendIx(this.connection, this.payer, ix, signers, `${functionName}:${role}`);
+    this.applyInitSignerMeta(functionName, ix);
+    const signers = actor.publicKey.equals(this.payer.publicKey) ? [...extraSigners] : [actor, ...extraSigners];
+    return sendEncodedInstruction(this.connection, this.payer, ix, signers, `${functionName}:${role}`);
   }
 
   async initGame(turnTimeoutSecs = 120): Promise<StepResult[]> {
@@ -574,10 +427,10 @@ export class LocalnetTicTacToeEngine {
         turn_timeout_secs: turnTimeoutSecs,
         allow_open_matches: 1,
         allow_invites: 1,
-      })
+      }, [this.configAccount])
     );
-    steps.push(await this.call('init_profile', 'p1', {}));
-    steps.push(await this.call('init_profile', 'p2', {}));
+    steps.push(await this.call('init_profile', 'p1', {}, [this.profileP1Account]));
+    steps.push(await this.call('init_profile', 'p2', {}, [this.profileP2Account]));
     if (steps.every((s) => s.ok)) {
       this.state.config.turnTimeoutSecs = turnTimeoutSecs;
       this.state.config.allowOpenMatches = true;
@@ -596,7 +449,7 @@ export class LocalnetTicTacToeEngine {
   }
 
   async createOpen(): Promise<StepResult> {
-    const step = await this.call('create_open_match', 'p1', {});
+    const step = await this.call('create_open_match', 'p1', {}, [this.matchAccount]);
     if (!step.ok) return step;
 
     this.state.config.nonce += 1;
@@ -622,7 +475,7 @@ export class LocalnetTicTacToeEngine {
   }
 
   async createInvite(): Promise<StepResult> {
-    const step = await this.call('create_invite_match', 'p1', {});
+    const step = await this.call('create_invite_match', 'p1', {}, [this.matchAccount]);
     if (!step.ok) return step;
 
     this.state.config.nonce += 1;

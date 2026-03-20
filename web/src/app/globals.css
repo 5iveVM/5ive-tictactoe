@@ -20,66 +20,124 @@
 }
 
 :root {
-  --background: #232136;
+  --background: #0b0a15;
   --foreground: #e0def4;
   --primary: #c4a7e7;
-  --primary-foreground: #232136;
-  --secondary: #2a273f;
+  --primary-foreground: #0b0a15;
+  --secondary: #191724;
   --secondary-foreground: #e0def4;
-  --accent: #9ccfd8;
-  --accent-foreground: #232136;
-  --muted: #393552;
+  --accent: #eb6f92;
+  --accent-foreground: #0b0a15;
+  --muted: #26233a;
   --muted-foreground: #908caa;
-  --border: rgba(255, 255, 255, 0.12);
-  --glass-bg: rgba(42, 39, 63, 0.68);
-  --glass-border: rgba(196, 167, 231, 0.24);
+  --border: rgba(196, 167, 231, 0.15);
+  
+  --neon-cyan: #06b6d4;
+  --neon-pink: #ec4899;
+  --neon-purple: #a855f7;
 }
 
 @layer base {
   body {
     background-color: var(--background);
     color: var(--foreground);
-    background-image:
-      radial-gradient(circle at 20% 30%, rgba(196, 167, 231, 0.16) 0%, transparent 45%),
-      radial-gradient(circle at 80% 20%, rgba(235, 111, 146, 0.1) 0%, transparent 40%),
-      radial-gradient(circle at 50% 90%, rgba(156, 207, 216, 0.08) 0%, transparent 40%);
+    background-image: 
+      radial-gradient(circle at 10% 10%, rgba(168, 85, 247, 0.15) 0%, transparent 40%),
+      radial-gradient(circle at 90% 90%, rgba(6, 182, 212, 0.1) 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.05) 0%, transparent 60%);
     background-attachment: fixed;
+    min-height: 100dvh;
+    @apply antialiased;
   }
 }
 
 @layer utilities {
   .glass {
-    background: var(--glass-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--glass-border);
+    background: rgba(25, 23, 36, 0.65);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
   }
 
-  .ttt-card {
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(99, 102, 241, 0.2);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+  .game-card {
+    background: linear-gradient(135deg, rgba(38, 35, 58, 0.4) 0%, rgba(15, 14, 26, 0.8) 100%);
+    border: 1px solid rgba(196, 167, 231, 0.15);
+    box-shadow: 
+      0 20px 50px rgba(0, 0, 0, 0.5),
+      inset 0 0 20px rgba(168, 85, 247, 0.05);
     backdrop-filter: blur(12px);
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
   }
 
-  .ttt-title {
-    background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
+  .game-title {
+    font-family: var(--font-sans);
+    background: linear-gradient(135deg, #a855f7 0%, #06b6d4 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
+    filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.4));
+    @apply font-black tracking-[0.25em];
   }
 
-  .ttt-cell {
-    background: rgba(15, 23, 42, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5), 0 4px 10px rgba(0, 0, 0, 0.3);
-    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  .game-cell {
+    background: rgba(38, 35, 58, 0.3);
+    border: 1.5px solid rgba(196, 167, 231, 0.1);
+    box-shadow: 
+      inset 0 0 15px rgba(0, 0, 0, 0.4),
+      0 4px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    @apply relative overflow-hidden flex items-center justify-center;
   }
 
-  .ttt-cell:hover:not(:disabled) {
-    transform: scale(1.05);
-    border-color: rgba(99, 102, 241, 0.55);
-    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.45), 0 8px 20px rgba(99, 102, 241, 0.25);
+  .game-cell:hover:not(:disabled) {
+    background: rgba(38, 35, 58, 0.5);
+    border-color: rgba(196, 167, 231, 0.4);
+    box-shadow: 
+      inset 0 0 20px rgba(168, 85, 247, 0.1),
+      0 0 30px rgba(168, 85, 247, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .game-cell:active:not(:disabled) {
+    transform: translateY(1px) scale(0.98);
+  }
+
+  .neon-glow-cyan {
+    text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.4);
+  }
+
+  .neon-glow-pink {
+    text-shadow: 0 0 10px rgba(236, 72, 153, 0.8), 0 0 20px rgba(236, 72, 153, 0.4);
+  }
+
+  .scanline {
+    width: 100%;
+    height: 100px;
+    z-index: 5;
+    background: linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0) 0%,
+      rgba(255, 255, 255, 0.03) 50%,
+      rgba(0, 0, 0, 0) 100%
+    );
+    opacity: 0.1;
+    position: absolute;
+    bottom: 100%;
+    animation: scanline 6s linear infinite;
+    pointer-events: none;
+  }
+
+  @keyframes scanline {
+    0% { bottom: 100%; }
+    100% { bottom: -100px; }
+  }
+
+  .grid-bg {
+    background-image: 
+      linear-gradient(rgba(196, 167, 231, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(196, 167, 231, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(circle at center, black, transparent 80%);
   }
 }

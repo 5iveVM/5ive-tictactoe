@@ -5,10 +5,11 @@ import type { Adapter, WalletError } from "@solana/wallet-adapter-base";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
+import { resolveRuntimeConfig } from "@/lib/runtime-config";
 
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-export type NetworkName = "devnet" | "mainnet";
+export type NetworkName = "localnet" | "devnet" | "mainnet";
 
 type NetworkContextValue = {
   network: NetworkName;
@@ -16,19 +17,17 @@ type NetworkContextValue = {
   setNetwork: (network: NetworkName) => void;
 };
 
-const DEVNET_ENDPOINT =
-  process.env.NEXT_PUBLIC_DEVNET_RPC_URL ||
-  (process.env.NEXT_PUBLIC_RPC_URL?.includes("devnet") ? process.env.NEXT_PUBLIC_RPC_URL : "") ||
-  "https://api.devnet.solana.com";
-const MAINNET_ENDPOINT =
-  process.env.NEXT_PUBLIC_MAINNET_RPC_URL ||
-  (process.env.NEXT_PUBLIC_RPC_URL?.includes("mainnet") ? process.env.NEXT_PUBLIC_RPC_URL : "") ||
-  "https://api.mainnet-beta.solana.com";
+const LOCALNET_ENDPOINT = resolveRuntimeConfig("localnet").rpcUrl;
+const DEVNET_ENDPOINT = resolveRuntimeConfig("devnet").rpcUrl;
+const MAINNET_ENDPOINT = resolveRuntimeConfig("mainnet").rpcUrl;
 const DEFAULT_NETWORK: NetworkName =
-  process.env.NEXT_PUBLIC_DEFAULT_NETWORK === "mainnet" ||
-  process.env.NEXT_PUBLIC_RPC_URL?.includes("mainnet")
-    ? "mainnet"
-    : "devnet";
+  process.env.NEXT_PUBLIC_DEFAULT_NETWORK === "localnet" ||
+  process.env.NEXT_PUBLIC_RPC_URL?.includes("127.0.0.1")
+    ? "localnet"
+    : process.env.NEXT_PUBLIC_DEFAULT_NETWORK === "mainnet" ||
+        process.env.NEXT_PUBLIC_RPC_URL?.includes("mainnet")
+      ? "mainnet"
+      : "devnet";
 const NETWORK_STORAGE_KEY = "five-tictactoe-network";
 
 const NetworkContext = createContext<NetworkContextValue | null>(null);
@@ -45,12 +44,16 @@ export function useNetworkConfig(): NetworkContextValue {
 
 export function WalletContextProvider({ children }: { children: React.ReactNode }) {
   const [network, setNetwork] = useState<NetworkName>(DEFAULT_NETWORK);
-  const endpoint = useMemo(() => (network === "mainnet" ? MAINNET_ENDPOINT : DEVNET_ENDPOINT), [network]);
+  const endpoint = useMemo(() => {
+    if (network === "localnet") return LOCALNET_ENDPOINT;
+    if (network === "mainnet") return MAINNET_ENDPOINT;
+    return DEVNET_ENDPOINT;
+  }, [network]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const stored = window.localStorage.getItem(NETWORK_STORAGE_KEY);
-    if (stored === "mainnet" || stored === "devnet") {
+    if (stored === "mainnet" || stored === "devnet" || stored === "localnet") {
       const frame = window.requestAnimationFrame(() => setNetwork(stored));
       return () => window.cancelAnimationFrame(frame);
     }
