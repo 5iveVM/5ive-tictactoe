@@ -42,7 +42,8 @@ npm run client:gui:localnet
 Open `http://127.0.0.1:4178`.
 
 ## Session Regression Smoke
-Validate sessionized gameplay in both direct mode and delegated mode:
+Validate sessionized gameplay in both direct mode and delegated mode.
+The smoke run enforces canonical PDA-only session accounts and rejects random/legacy session account usage:
 
 ```bash
 # localnet

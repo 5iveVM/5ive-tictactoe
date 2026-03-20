@@ -12,10 +12,11 @@ import {
 } from '../../five-cli/node_modules/@solana/web3.js/lib/index.cjs.js';
 import { FiveProgram, FiveSDK } from '../../five-sdk/dist/index.js';
 
-const DEFAULT_VM_PROGRAM_ID = '5ive5hbC3aRsvq37MP5m4sHtTSFxT4Cq1smS4ddyWJ6h';
+const DEFAULT_VM_PROGRAM_ID = '55555SyrYLzydvDMBhAL8uo6h4WETHTm81z8btf6nAVJ';
 const DEFAULT_SESSION_SCOPE_HASH = scopeHashForFunctions([
   'start_single_player',
   'play_ttt_single',
+  'close_finished_match',
 ]);
 
 const SESSION_MANAGER_ABI = {
@@ -26,13 +27,24 @@ const SESSION_MANAGER_ABI = {
       index: 0,
       parameters: [
         { name: 'session', type: 'Account', is_account: true, attributes: ['mut'] },
-        { name: 'authority', type: 'Account', is_account: true, attributes: ['signer'] },
+        { name: 'authority', type: 'Account', is_account: true, attributes: ['signer', 'mut'] },
         { name: 'delegate', type: 'Account', is_account: true, attributes: [] },
         { name: 'target_program', type: 'pubkey', is_account: false, attributes: [] },
         { name: 'expires_at_slot', type: 'u64', is_account: false, attributes: [] },
         { name: 'scope_hash', type: 'u64', is_account: false, attributes: [] },
         { name: 'bind_account', type: 'pubkey', is_account: false, attributes: [] },
         { name: 'nonce', type: 'u64', is_account: false, attributes: [] },
+      ],
+      return_type: null,
+      is_public: true,
+      bytecode_offset: 0,
+    },
+    {
+      name: 'revoke_session',
+      index: 1,
+      parameters: [
+        { name: 'session', type: 'Account', is_account: true, attributes: ['mut'] },
+        { name: 'authority', type: 'Account', is_account: true, attributes: ['signer', 'mut'] },
       ],
       return_type: null,
       is_public: true,
@@ -241,40 +253,47 @@ async function runMode({
 
   if (mode === 'delegated') {
     const delegate = Keypair.generate();
-    const session = Keypair.generate();
-    const sessionRent = await connection.getMinimumBalanceForRentExemption(256);
-
-    const createSessionAccountTx = new Transaction().add(
-      SystemProgram.createAccount({
-        fromPubkey: payer.publicKey,
-        newAccountPubkey: session.publicKey,
-        lamports: sessionRent,
-        space: 256,
-        programId: new PublicKey(vmProgramId),
-      })
+    const slot = await connection.getSlot('confirmed');
+    const [canonicalSession] = await sessionProgram.findAddress(
+      ['session', owner, delegate.publicKey.toBase58(), scriptAccount],
+      vmProgramId
     );
 
-    const createSig = await connection.sendTransaction(createSessionAccountTx, [payer, session], {
-      commitment: 'confirmed',
-      preflightCommitment: 'confirmed',
-    });
-    const latest = await connection.getLatestBlockhash('confirmed');
-    await connection.confirmTransaction({ signature: createSig, ...latest }, 'confirmed');
+    // Pre-release hardening gate: random/non-canonical session accounts must fail.
+    const randomLegacySession = Keypair.generate();
+    const legacyCreateSessionIx = await sessionProgram
+      .function('create_session')
+      .payer(owner)
+      .accounts({
+        session: randomLegacySession.publicKey.toBase58(),
+        authority: owner,
+        delegate: delegate.publicKey.toBase58(),
+      })
+      .args({
+        target_program: scriptAccount,
+        expires_at_slot: slot + 3000,
+        scope_hash: sessionScopeHash,
+        bind_account: setup.match.publicKey.toBase58(),
+        nonce: 0,
+      })
+      .instruction();
+    const legacyRejectedStep = await sendNamedIx(
+      connection,
+      payer,
+      'create_session_legacy_random_rejected',
+      legacyCreateSessionIx
+    );
+    legacyRejectedStep.expectedFailure = true;
+    if (!legacyRejectedStep.err) {
+      legacyRejectedStep.err = 'unexpected success for non-canonical session account';
+    }
+    summary.steps.push(legacyRejectedStep);
 
-    summary.steps.push({
-      name: 'create_session_account',
-      signature: createSig,
-      err: null,
-      computeUnits: null,
-      logsTail: [],
-    });
-
-    const slot = await connection.getSlot('confirmed');
     const createSessionIx = await sessionProgram
       .function('create_session')
       .payer(owner)
       .accounts({
-        session: session.publicKey.toBase58(),
+        session: canonicalSession,
         authority: owner,
         delegate: delegate.publicKey.toBase58(),
       })
@@ -291,10 +310,56 @@ async function runMode({
     summary.steps.push(createSessionStep);
 
     caller = delegate.publicKey.toBase58();
-    sessionAccount = session.publicKey.toBase58();
+    sessionAccount = canonicalSession;
     callerSigners = [delegate];
     summary.delegate = delegate.publicKey.toBase58();
-    summary.session = session.publicKey.toBase58();
+    summary.session = canonicalSession;
+
+    // Expired sessions must still be revocable so authority can reclaim rent.
+    const expiredDelegate = Keypair.generate();
+    const [expiredSession] = await sessionProgram.findAddress(
+      ['session', owner, expiredDelegate.publicKey.toBase58(), scriptAccount],
+      vmProgramId
+    );
+    const createExpiredSessionIx = await sessionProgram
+      .function('create_session')
+      .payer(owner)
+      .accounts({
+        session: expiredSession,
+        authority: owner,
+        delegate: expiredDelegate.publicKey.toBase58(),
+      })
+      .args({
+        target_program: scriptAccount,
+        expires_at_slot: Math.max(0, slot - 1),
+        scope_hash: sessionScopeHash,
+        bind_account: setup.match.publicKey.toBase58(),
+        nonce: 1,
+      })
+      .instruction();
+    const createExpiredStep = await sendNamedIx(
+      connection,
+      payer,
+      'create_expired_session',
+      createExpiredSessionIx
+    );
+    summary.steps.push(createExpiredStep);
+
+    const revokeExpiredSessionIx = await sessionProgram
+      .function('revoke_session')
+      .payer(owner)
+      .accounts({
+        session: expiredSession,
+        authority: owner,
+      })
+      .instruction();
+    const revokeExpiredStep = await sendNamedIx(
+      connection,
+      payer,
+      'revoke_expired_session',
+      revokeExpiredSessionIx
+    );
+    summary.steps.push(revokeExpiredStep);
   }
 
   await runCall(
@@ -326,8 +391,23 @@ function summarize(results) {
   const failures = [];
   for (const run of results) {
     for (const step of run.steps) {
-      if (step.err) {
-        failures.push({ mode: run.mode, step: step.name, signature: step.signature, err: step.err });
+      const expectsFailure = step.expectedFailure === true;
+      if (expectsFailure) {
+        if (!step.err) {
+          failures.push({
+            mode: run.mode,
+            step: step.name,
+            signature: step.signature,
+            err: 'expected failure but step succeeded',
+          });
+        }
+      } else if (step.err) {
+        failures.push({
+          mode: run.mode,
+          step: step.name,
+          signature: step.signature,
+          err: step.err,
+        });
       }
     }
   }

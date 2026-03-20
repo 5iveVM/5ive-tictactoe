@@ -13,9 +13,11 @@
     "test:session-smoke:devnet": "node scripts/session-regression-smoke.mjs --rpc-url https://api.devnet.solana.com --script-account $FIVE_SCRIPT_ACCOUNT",
     "test:onchain:mainnet": "node scripts/run-onchain.mjs mainnet",
     "test:onchain:mainnet:preflight": "node ../five-cli/dist/index.js test --on-chain --target mainnet",
-    "deploy:local": "node ../five-cli/dist/index.js deploy build/*.five --project . --target local",
-    "deploy:devnet": "node ../five-cli/dist/index.js deploy build/*.five --project . --target devnet",
-    "deploy:mainnet": "node ../five-cli/dist/index.js deploy build/*.five --project . --target mainnet",
+    "deploy:local": "node scripts/deploy-and-record.mjs localnet",
+    "deploy:devnet": "node scripts/deploy-and-record.mjs devnet",
+    "deploy:mainnet": "node scripts/deploy-and-record.mjs mainnet",
+    "bootstrap:localnet": "node scripts/bootstrap-localnet.mjs",
+    "diagnose:init-profile:localnet": "node scripts/diagnose-init-profile.mjs",
     "deploy": "node ../five-cli/dist/index.js deploy build/*.five --project .",
     "build:release": "node ../five-cli/dist/index.js compile src/**/*.v -O 3",
     "build:debug": "node ../five-cli/dist/index.js compile src/**/*.v --debug",
@@ -24,6 +26,7 @@
     "client:run": "npm --prefix client install && npm --prefix client run run",
     "client:test:localnet": "npm run build && npm --prefix client install && npm --prefix client run test:localnet",
     "client:test:journey:localnet": "npm run build && npm --prefix client install && npm --prefix client run test:journey:localnet",
+    "client:test:web-init:localnet": "npm run build && npm --prefix client install && npm --prefix client run test:web-init:localnet",
     "client:journey:localnet": "npm run build && npm --prefix client install && npm --prefix client run journey:localnet",
     "client:run:local": "FIVE_NETWORK=localnet npm run client:run",
     "client:run:devnet": "FIVE_NETWORK=devnet npm run client:run",
@@ -35,7 +38,8 @@
     "verify": "npm run build && npm run test && npm run test:onchain:local && npm run client:run:local",
     "verify:networks": "npm run build && npm run test && npm run test:onchain:local && npm run test:onchain:devnet && npm run test:onchain:mainnet:preflight",
     "smoke": "npm run build && npm run test",
-    "smoke:onchain:local": "npm run build && npm run test:onchain:local"
+    "smoke:onchain:local": "npm run build && npm run test:onchain:local",
+    "check:sync": "node scripts/check-network-sync.mjs --all"
   },
   "devDependencies": {
     "@5ive-tech/cli": "^1.0.0"

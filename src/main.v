@@ -1,8 +1,8 @@
 account TicTacToeConfig {
     authority: pubkey;
-    turn_timeout_secs: u32;
-    allow_open_matches: u8;
-    allow_invites: u8;
+    turn_timeout_secs: u64;
+    allow_open_matches: u64;
+    allow_invites: u64;
     match_nonce: u64;
 }
 
@@ -16,30 +16,26 @@ account MatchState {
     winner: u8;
     last_move_index: u8;
     move_count: u8;
-    turn_timeout_secs: u32;
-    turn_deadline_ts: u32;
-    created_at_ts: u32;
-    started_at_ts: u32;
-    ended_at_ts: u32;
+    turn_timeout_secs: u64;
+    turn_deadline_ts: u64;
+    created_at_ts: u64;
+    started_at_ts: u64;
+    ended_at_ts: u64;
     ttt_p1_bits: u64;
     ttt_p2_bits: u64;
 }
 
 account PlayerProfile {
     authority: pubkey;
-    games_played: u32;
-    wins: u32;
-    losses: u32;
-    draws: u32;
-    timeouts_claimed: u32;
+    games_played: u64;
+    wins: u64;
+    losses: u64;
+    draws: u64;
+    timeouts_claimed: u64;
 }
 
 fn now_slot() -> u64 {
     return get_clock().slot;
-}
-
-fn now_slot_u32() -> u32 {
-    return now_slot() as u32;
 }
 
 fn seat_of(match_state: MatchState, key: pubkey) -> u64 {
@@ -53,11 +49,11 @@ fn seat_of(match_state: MatchState, key: pubkey) -> u64 {
 }
 
 pub init_config(
-    config: TicTacToeConfig @mut,
+    config: TicTacToeConfig @mut @init(payer=authority),
     authority: account @signer,
-    turn_timeout_secs: u32,
-    allow_open_matches: u8,
-    allow_invites: u8
+    turn_timeout_secs: u64,
+    allow_open_matches: u64,
+    allow_invites: u64
 ) {
     config.authority = authority.ctx.key;
     if turn_timeout_secs == 0 {
@@ -71,7 +67,7 @@ pub init_config(
 }
 
 pub init_profile(
-    profile: PlayerProfile @mut,
+    profile: PlayerProfile @mut @init(payer=owner),
     owner: account @signer
 ) {
     profile.authority = owner.ctx.key;
@@ -84,7 +80,7 @@ pub init_profile(
 
 pub create_open_match(
     config: TicTacToeConfig @mut,
-    match_state: MatchState @mut,
+    match_state: MatchState @mut @init(payer=player1),
     player1: account @signer
 ) {
     config.match_nonce = config.match_nonce + 1;
@@ -104,7 +100,7 @@ pub create_open_match(
         match_state.turn_timeout_secs = config.turn_timeout_secs;
     }
     match_state.turn_deadline_ts = 0;
-    match_state.created_at_ts = now_slot_u32();
+    match_state.created_at_ts = now_slot();
     match_state.started_at_ts = 0;
     match_state.ended_at_ts = 0;
     match_state.ttt_p1_bits = 0;
@@ -113,7 +109,7 @@ pub create_open_match(
 
 pub create_invite_match(
     config: TicTacToeConfig @mut,
-    match_state: MatchState @mut,
+    match_state: MatchState @mut @init(payer=player1),
     player1: account @signer,
     invited_player: account
 ) {
@@ -134,7 +130,7 @@ pub create_invite_match(
         match_state.turn_timeout_secs = config.turn_timeout_secs;
     }
     match_state.turn_deadline_ts = 0;
-    match_state.created_at_ts = now_slot_u32();
+    match_state.created_at_ts = now_slot();
     match_state.started_at_ts = 0;
     match_state.ended_at_ts = 0;
     match_state.ttt_p1_bits = 0;
@@ -158,7 +154,7 @@ pub join_match(
     match_state.status = 1;
     match_state.current_turn = 1;
 
-    let now = now_slot_u32();
+    let now = now_slot();
     match_state.started_at_ts = now;
     match_state.turn_deadline_ts = now + match_state.turn_timeout_secs;
 }
@@ -174,7 +170,7 @@ pub start_single_player(
     match_state.status = 1;
     match_state.current_turn = 1;
 
-    let now = now_slot_u32();
+    let now = now_slot();
     match_state.started_at_ts = now;
     match_state.turn_deadline_ts = now + match_state.turn_timeout_secs;
 }
@@ -203,9 +199,9 @@ pub play_ttt(
     if match_state.move_count >= 9 {
         match_state.status = 4;
         match_state.winner = 0;
-        match_state.ended_at_ts = now_slot_u32();
+        match_state.ended_at_ts = now_slot();
     } else {
-        let now = now_slot_u32();
+        let now = now_slot();
         match_state.turn_deadline_ts = now + match_state.turn_timeout_secs;
     }
 }
@@ -230,7 +226,7 @@ pub play_ttt_single(
     if match_state.move_count >= 9 {
         match_state.status = 4;
         match_state.winner = 0;
-        match_state.ended_at_ts = now_slot_u32();
+        match_state.ended_at_ts = now_slot();
         return;
     }
 
@@ -241,12 +237,12 @@ pub play_ttt_single(
     if match_state.move_count >= 9 {
         match_state.status = 4;
         match_state.winner = 0;
-        match_state.ended_at_ts = now_slot_u32();
+        match_state.ended_at_ts = now_slot();
         return;
     }
 
     match_state.current_turn = 1;
-    let now = now_slot_u32();
+    let now = now_slot();
     match_state.turn_deadline_ts = now + match_state.turn_timeout_secs;
 }
 
@@ -265,12 +261,12 @@ pub play_cpu_random(
     if match_state.move_count >= 9 {
         match_state.status = 4;
         match_state.winner = 0;
-        match_state.ended_at_ts = now_slot_u32();
+        match_state.ended_at_ts = now_slot();
         return;
     }
 
     match_state.current_turn = 1;
-    let now = now_slot_u32();
+    let now = now_slot();
     match_state.turn_deadline_ts = now + match_state.turn_timeout_secs;
 }
 
@@ -290,7 +286,7 @@ pub claim_timeout(
         match_state.status = 3;
         match_state.winner = 2;
     }
-    match_state.ended_at_ts = now_slot_u32();
+    match_state.ended_at_ts = now_slot();
 }
 
 pub resign(
@@ -309,7 +305,7 @@ pub resign(
         match_state.status = 2;
         match_state.winner = 1;
     }
-    match_state.ended_at_ts = now_slot_u32();
+    match_state.ended_at_ts = now_slot();
 }
 
 pub cancel_waiting_match(
@@ -321,7 +317,16 @@ pub cancel_waiting_match(
 
     match_state.status = 5;
     match_state.winner = 0;
-    match_state.ended_at_ts = now_slot_u32();
+    match_state.ended_at_ts = now_slot();
+}
+
+pub close_finished_match(
+    match_state: MatchState @mut,
+    caller: account @session,
+    owner_refund: account @mut
+) {
+    require(owner_refund.ctx.key == match_state.player1);
+    close_account(match_state, owner_refund);
 }
 
 pub get_match_status(match_state: MatchState) -> u64 {

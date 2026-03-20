@@ -1,9 +1,9 @@
 {
   "network": "mainnet",
-  "rpcUrl": "https://api.mainnet-beta.solana.com",
-  "fiveProgramId": "5ive5hbC3aRsvq37MP5m4sHtTSFxT4Cq1smS4ddyWJ6h",
-  "vmStatePda": "ADQaL87GCvMAuYV13RCnPHb4ivfQVkc5uLg3EgetKpYZ",
-  "tictactoeScriptAccount": "Hu6mxNzeXsHuX31eS3516YdisVpmkzJkEZibMzNJhKnJ",
-  "tictactoeConfigAccount": "DAmjCd3fdVE9WqbuweRewihnChQ4J4jc5mtuqxde5foG",
-  "updatedAt": "2026-03-18T00:00:00Z"
+  "rpcUrl": "https://solana-mainnet.g.alchemy.com/v2/iYUHtW5GGIvK7hTlORbC9",
+  "fiveProgramId": "55555SyrYLzydvDMBhAL8uo6h4WETHTm81z8btf6nAVJ",
+  "vmStatePda": "7utm673i6SYNBkBsjpD4fBo9oXP6U5AkvVHrSwBrAPMf",
+  "tictactoeScriptAccount": "EURPiskXDCicEop78uV5VRBXABecfR588XJbmiYKLVGU",
+  "tictactoeConfigAccount": "2Kq8EKWz9tdkbCCqrvJCvUVY65VsV9Rt9AWkYZeHCcsJ",
+  "updatedAt": "2026-03-20T08:39:13.032Z"
 }

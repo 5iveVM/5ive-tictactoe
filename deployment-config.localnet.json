@@ -1,8 +1,9 @@
 {
   "network": "localnet",
   "rpcUrl": "http://127.0.0.1:8899",
-  "fiveProgramId": "5ive5hbC3aRsvq37MP5m4sHtTSFxT4Cq1smS4ddyWJ6h",
-  "vmStatePda": "<SET_AFTER_VM_INIT>",
-  "tictactoeScriptAccount": "<SET_AFTER_TICTACTOE_DEPLOY>",
-  "updatedAt": "2026-03-11T00:00:00Z"
+  "fiveProgramId": "55555SyrYLzydvDMBhAL8uo6h4WETHTm81z8btf6nAVJ",
+  "vmStatePda": "7utm673i6SYNBkBsjpD4fBo9oXP6U5AkvVHrSwBrAPMf",
+  "tictactoeScriptAccount": "8nP9KaoWjsD76qxC3AkKwAD9Fu7YMXWeiB7NQ1ZQzTH8",
+  "tictactoeConfigAccount": "FSqMr2ASb2U9a9vNgTn3JVTRMtX2zN3LuiwsEZH7k1gA",
+  "updatedAt": "2026-03-20T04:28:43.363Z"
 }

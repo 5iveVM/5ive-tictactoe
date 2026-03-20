@@ -26,7 +26,7 @@ export function Navbar({ status, moveCount, mode }: NavbarProps) {
             href="https://5ive.tech"
             target="_blank"
             rel="noreferrer"
-            className="text-lg font-black tracking-wide uppercase text-[#e0def4] transition-opacity hover:opacity-80 md:text-xl"
+            className="text-lg font-black tracking-[0.3em] uppercase text-primary transition-all hover:text-[#06b6d4] hover:drop-shadow-[0_0_8px_rgba(6,182,212,0.6)] md:text-xl"
           >
             5IVE
           </a>
@@ -39,6 +39,17 @@ export function Navbar({ status, moveCount, mode }: NavbarProps) {
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <div className="hidden sm:flex items-center rounded-xl border border-white/10 bg-white/5 p-1">
+              <button
+                type="button"
+                onClick={() => setNetwork("localnet")}
+                className={`rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                  network === "localnet"
+                    ? "bg-[#c4a7e7]/35 text-[#e0def4]"
+                    : "text-[#908caa] hover:bg-white/10"
+                }`}
+              >
+                Localnet
+              </button>
               <button
                 type="button"
                 onClick={() => setNetwork("devnet")}
@@ -62,7 +73,7 @@ export function Navbar({ status, moveCount, mode }: NavbarProps) {
                 Mainnet
               </button>
             </div>
-            <div className="[&_.wallet-adapter-button]:h-9 sm:[&_.wallet-adapter-button]:h-10 [&_.wallet-adapter-button]:rounded-xl [&_.wallet-adapter-button]:border [&_.wallet-adapter-button]:border-[#c4a7e7]/35 [&_.wallet-adapter-button]:bg-[#c4a7e7]/20 [&_.wallet-adapter-button]:px-3 sm:[&_.wallet-adapter-button]:px-5 [&_.wallet-adapter-button]:text-[#e0def4] [&_.wallet-adapter-button]:font-bold [&_.wallet-adapter-button]:text-xs sm:[&_.wallet-adapter-button]:text-sm [&_.wallet-adapter-button]:hover:bg-[#c4a7e7]/35 transition-all active:scale-95 rounded-xl">
+            <div className="[&_.wallet-adapter-button]:h-9 sm:[&_.wallet-adapter-button]:h-10 [&_.wallet-adapter-button]:rounded-xl [&_.wallet-adapter-button]:border [&_.wallet-adapter-button]:border-primary/30 [&_.wallet-adapter-button]:bg-primary/10 [&_.wallet-adapter-button]:px-3 sm:[&_.wallet-adapter-button]:px-5 [&_.wallet-adapter-button]:text-[#e0def4] [&_.wallet-adapter-button]:font-bold [&_.wallet-adapter-button]:text-xs sm:[&_.wallet-adapter-button]:text-sm [&_.wallet-adapter-button]:hover:bg-primary/20 transition-all active:scale-95 rounded-xl">
               <WalletMultiButton />
             </div>
             <a
